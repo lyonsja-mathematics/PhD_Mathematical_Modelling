@@ -1,0 +1,1 @@
+This repository contains all the R code I wrote for my PhD thesis on mathematical modelling of photonic structures for environmental sensing. My research was funded by the Irish Research Council (GOIPG/2021/214).
