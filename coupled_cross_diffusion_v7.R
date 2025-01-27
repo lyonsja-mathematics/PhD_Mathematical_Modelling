@@ -24,7 +24,7 @@ coupled_cross_diffusion_v7 = function(
   end_exp=1e2, # End of exposure
   total.time=100,# Total simulation time
   lpmm=1e3,# Spatial frequency
-	T0=50e-4,# cm
+  T0=50e-4,# cm
   F0=0.1*5**0.3,# Intensity of first recording beam
   xi=0.3,# Scattering coefficient
   Dm=1.6e-7,# Monomer diffusion coefficient
@@ -36,14 +36,14 @@ coupled_cross_diffusion_v7 = function(
   nq=1.64,# Polymer refractive index
   Gamma=1,# Rate of immobilization
   Dz=1e-10,# Nanoparticle cross-diffusion ratio
-	epsilon.mz=0,# Cross-diffusion
-	epsilon.pz=13,# Cross-diffusion
-	epsilon.qz=13,# Cross-diffusion
+  epsilon.mz=0,# Cross-diffusion
+  epsilon.pz=13,# Cross-diffusion
+  epsilon.qz=13,# Cross-diffusion
   wt.pc=5e-2,# Doping %
   rhoz=1.74,# Nanoparticle mass density
   nz=1.366,# Nanoparticle refractive index
   b0=5.05,# Binder mass
-	nb=1.5,# Binder refractive inedx
+  nb=1.5,# Binder refractive inedx
   rhob=1.19, # Binder mass density
   Delta.t=1/100,# Numerical scheme time step
   Delta.x=1/20,# Numerical scheme spatial step
@@ -52,7 +52,7 @@ coupled_cross_diffusion_v7 = function(
 ){
   
   # 1.2 --- Define parameters
-	iterations.per.second=1/Delta.t# Number of iterations each second
+  iterations.per.second=1/Delta.t# Number of iterations each second
   Nx=1/Delta.x + 1# Number of spatial points
   x=seq(0, 1, length.out=Nx)# Non-dimensional grating distance
   Nt = total.time*iterations.per.second +1# Total number of iterations
