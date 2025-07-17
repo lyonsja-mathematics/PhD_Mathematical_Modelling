@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jul 16 16:26:54 2025
-
-@author: lyons
-"""
-
 import numpy as np
 import pandas as pd
 from math import pi
