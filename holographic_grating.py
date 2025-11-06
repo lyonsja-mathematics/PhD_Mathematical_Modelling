@@ -1,7 +1,10 @@
+from warnings import filterwarnings
+filterwarnings("ignore")
 import numpy as np
 import pandas as pd
 from math import pi, factorial
 from numpy.linalg import inv
+from time import time as gettime
 
 class holographic_grating:
     
@@ -44,7 +47,10 @@ class holographic_grating:
         self.lpmm = lpmm
         self.T0 = T0
         self.I0 = I0
-        self.slant_angle = slant_angle
+        if slant_angle == 0:
+            self.slant_angle = 1e-5
+        else:
+            self.slant_angle = slant_angle
         self.T0 = T0
         self.zeta = zeta
         self.xi = xi
@@ -67,22 +73,15 @@ class holographic_grating:
         self.rhob = rhob
         self.lambda_probe = lambda_probe
         self.Delta_x = Delta_x
+        self.Nx = int(1/Delta_x) + 1
         self.Delta_Y = Delta_x
         self.Delta_t = Delta_t
         self.output_time_step = output_time_step
         
-    def trapezoidal_rule_integration(array):
-        array=array.reshape(Nx,Nx).T
-        return self.Delta_x*self.Delta_x/4*(array[0,0] + array[Nx-1,0] + array[0,Nx-1] + array[Nx-1,Nx-1] + np.sum(2*array[0,1:(Nx-1)]) + np.sum(2*array[1:(Nx-1),0]) + np.sum(2*array[Nx-1,1:(Nx-1)]) + np.sum(2*array[1:(Nx-1),Nx-1]) + np.sum(4*array[1:(Nx-1),1:(Nx-1)]))
-    
-    def simpsons_rule_1D(arr1D):
-        intpts=list(range(1,len(arr1D)-1))
-        times_4=[i for i in intpts if i%2!=0]
-        times_2=[i for i in intpts if i%2==0]
-        return self.Delta_x/3*(arr1D[0] + 4*sum(arr1D[times_4]) + 2*sum(arr1D[times_2]) + arr1D[len(arr1D)-1])
     
     def slanted_grating_simulation_v22(self):
         
+        start_computation = gettime()
         # 1.2 --- Define parameters
         Nx=int(1/self.Delta_x) + 1# Number of spatial points
         Ny=int(1/self.Delta_Y) + 1# Number of spatial points
@@ -110,21 +109,21 @@ class holographic_grating:
         z1 = np.ones(Nx*Nx)# z at j=0
         b1 = self.b0*np.ones(Nx*Nx)# b at j=0
         
-        Volume0=m0/self.rhom + self.b0/self.rhob + self.z0/self.rhoz
+        Volume0=m0/self.rhom + self.b0/self.rhob + z0/self.rhoz
         
         phi_m0=m0/self.rhom/Volume0
-        phi_z0=self.z0/self.rhoz/Volume0
+        phi_z0=z0/self.rhoz/Volume0
         phi_b0=self.b0/self.rhob/Volume0
         
         Lorentz_Lorenz_RHS = phi_m0*(self.n_m*self.n_m - 1)/(self.n_m*self.n_m + 2) + phi_b0*(self.n_b*self.n_b - 1)/(self.n_b*self.n_b + 2) + phi_z0*(self.n_z*self.n_z - 1)/(self.n_z*self.n_z + 2)
         
         Initial_RI = np.sqrt((2*Lorentz_Lorenz_RHS + 1)/(1 - Lorentz_Lorenz_RHS))
         
+        inside_ri = Initial_RI
+        
         n1=Initial_RI*np.ones(Nx*Nx)
         
-        if self.slant_angle==0:
-            slant_angle=1e-05
-        phi_0=np.arcsin(np.sin(slant_angle/180*pi)/Initial_RI)
+        phi_0=np.arcsin(np.sin(self.slant_angle/180*pi)/Initial_RI)
         phi_1=phi_0
         theta_B0=np.arcsin(self.lambda_probe/2/Initial_RI/Lambda0) - phi_0
         y_hat0=Lambda0/np.sin(phi_0)
@@ -142,7 +141,7 @@ class holographic_grating:
         beta=F0*t0
         gamma = self.Gamma*m0*t0
         zeta_star = self.zeta*self.T0
-        xi_star=self.xi*self.z0
+        xi_star=self.xi*z0
         interior_points = list(range(1,Nx-1))
         times_4 = [interior_points[i] for i in range(len(interior_points)) if interior_points[i]%2 != 0]
         times_2 = [interior_points[i] for i in range(len(interior_points)) if interior_points[i]%2 == 0]
@@ -163,6 +162,22 @@ class holographic_grating:
         optical_properties_DF=pd.DataFrame({'Y': Y, "time": np.zeros(len(Y)), 'N0':np.zeros(len(Y))+Initial_RI,'Delta_n':np.zeros(len(Y)),'nu':np.zeros(len(Y)),'d2':np.zeros(len(Y))})
         
         shrinkage_DF=pd.DataFrame({'time':[0], 'actual_shrinkage':[0],'phi_t':[phi_0],'theta_B':[theta_B0],'apparent_shrinkage':[0]})
+        
+        def trapezoidal_rule_integration(array):
+            
+            array=array.reshape(Nx,Nx).T
+            
+            return Delta_x*Delta_x/4*(array[0,0] + array[Nx-1,0] + array[0,Nx-1] + array[Nx-1,Nx-1] + np.sum(2*array[0,1:(Nx-1)]) + np.sum(2*array[1:(Nx-1),0]) + np.sum(2*array[Nx-1,1:(Nx-1)]) + np.sum(2*array[1:(Nx-1),Nx-1]) + np.sum(4*array[1:(Nx-1),1:(Nx-1)]))
+        
+        def simpsons_rule_1D(arr1D):
+            
+            intpts=list(range(1,len(arr1D)-1))
+            times_4=[i for i in intpts if i%2!=0]
+            times_2=[i for i in intpts if i%2==0]
+            
+            return Delta_x/3*(arr1D[0] + 4*sum(arr1D[times_4]) + 2*sum(arr1D[times_2]) + arr1D[len(arr1D)-1])
+        
+        
         
         # 1.6 --- Calculate each time step via implicit finite difference method
         for j in range(1,n_iterations):
@@ -231,19 +246,19 @@ class holographic_grating:
                 MM1[i, i_plus_1] = MM1[i, i_plus_1] + r*alpha_m_x
                 MM1[i, j_plus_1] = MM1[i, j_plus_1] + r*alpha_m_y/u1/u1
                 
-                PP2[i, i_minus_1] = PP2[i, i_minus_1] - r*alpha_p_x*(1 + self.epsilon_pz*self.z0*z1[i_minus_1])
-                PP2[i, j_minus_1] = PP2[i, j_minus_1] - r*alpha_p_y/u1/u1*(1 + self.epsilon_pz*self.z0*z1[j_minus_1])
-                PP2[i, i] = PP2[i, i] + 2*r*alpha_p_x*(1 + self.epsilon_pz*self.z0*z1[i])
-                PP2[i, i] = PP2[i, i] + 2*r*alpha_p_y/u1/u1*(1 + self.epsilon_pz*self.z0*z1[i])
-                PP2[i, i_plus_1] = PP2[i, i_plus_1] - r*alpha_p_x*(1 + self.epsilon_pz*self.z0*z1[i_plus_1])
-                PP2[i, j_plus_1] = PP2[i, j_plus_1] - r*alpha_p_y/u1/u1*(1 + self.epsilon_pz*self.z0*z1[j_plus_1])
+                PP2[i, i_minus_1] = PP2[i, i_minus_1] - r*alpha_p_x*(1 + self.epsilon_pz*z0*z1[i_minus_1])
+                PP2[i, j_minus_1] = PP2[i, j_minus_1] - r*alpha_p_y/u1/u1*(1 + self.epsilon_pz*z0*z1[j_minus_1])
+                PP2[i, i] = PP2[i, i] + 2*r*alpha_p_x*(1 + self.epsilon_pz*z0*z1[i])
+                PP2[i, i] = PP2[i, i] + 2*r*alpha_p_y/u1/u1*(1 + self.epsilon_pz*z0*z1[i])
+                PP2[i, i_plus_1] = PP2[i, i_plus_1] - r*alpha_p_x*(1 + self.epsilon_pz*z0*z1[i_plus_1])
+                PP2[i, j_plus_1] = PP2[i, j_plus_1] - r*alpha_p_y/u1/u1*(1 + self.epsilon_pz*z0*z1[j_plus_1])
                 
-                PP1[i, i_minus_1] = PP1[i, i_minus_1] + r*alpha_p_x*(1 + self.epsilon_pz*self.z0*z1[i_minus_1])
-                PP1[i, j_minus_1] = PP1[i, j_minus_1] + r*alpha_p_y/u1/u1*(1 + self.epsilon_pz*self.z0*z1[j_minus_1])
-                PP1[i, i] = PP1[i, i] - 2*r*alpha_p_x*(1 + self.epsilon_pz*self.z0*z1[i])
-                PP1[i, i] = PP1[i, i] - 2*r*alpha_p_y/u1/u1*(1 + self.epsilon_pz*self.z0*z1[i])
-                PP1[i, i_plus_1] = PP1[i, i_plus_1] + r*alpha_p_x*(1 + self.epsilon_pz*self.z0*z1[i_plus_1])
-                PP1[i, j_plus_1] = PP1[i, j_plus_1] + r*alpha_p_y/u1/u1*(1 + self.epsilon_pz*self.z0*z1[j_plus_1])
+                PP1[i, i_minus_1] = PP1[i, i_minus_1] + r*alpha_p_x*(1 + self.epsilon_pz*z0*z1[i_minus_1])
+                PP1[i, j_minus_1] = PP1[i, j_minus_1] + r*alpha_p_y/u1/u1*(1 + self.epsilon_pz*z0*z1[j_minus_1])
+                PP1[i, i] = PP1[i, i] - 2*r*alpha_p_x*(1 + self.epsilon_pz*z0*z1[i])
+                PP1[i, i] = PP1[i, i] - 2*r*alpha_p_y/u1/u1*(1 + self.epsilon_pz*z0*z1[i])
+                PP1[i, i_plus_1] = PP1[i, i_plus_1] + r*alpha_p_x*(1 + self.epsilon_pz*z0*z1[i_plus_1])
+                PP1[i, j_plus_1] = PP1[i, j_plus_1] + r*alpha_p_y/u1/u1*(1 + self.epsilon_pz*z0*z1[j_plus_1])
                 
                 ZZ2[i, i_minus_1] = ZZ2[i, i_minus_1] - r*alpha_z_x*(1 + self.epsilon_qz*q1[i_minus_1] + self.epsilon_pz*p1[i_minus_1])
                 ZZ2[i, j_minus_1] = ZZ2[i, j_minus_1] - r*alpha_z_y/u1/u1*(1 + self.epsilon_qz*q1[j_minus_1] + self.epsilon_pz*p1[j_minus_1])
@@ -301,7 +316,7 @@ class holographic_grating:
             Vm = m2*m0/self.rhom # cm**3
             Vp = p2*m0/self.rhop # cm**3
             Vq = q2*m0/self.rhop # cm**3
-            Vz = z2*self.z0/self.rhoz # cm**3
+            Vz = z2*z0/self.rhoz # cm**3
             Vtotal=Vb+Vm+Vp+Vq+Vz # cm**3
             phi_m = Vm/Vtotal
             phi_b = Vb/Vtotal
@@ -314,7 +329,7 @@ class holographic_grating:
             n2=np.sqrt((2*Lorentz_Lorenz_RHS + 1)/(1 - Lorentz_Lorenz_RHS))
             n2=n2.reshape(Nx,Nx).T
             
-            inside_ri=simpsons_rule_1D(n2[int((Nx-1)/2)])
+            inside_ri = simpsons_rule_1D(n2[int((Nx-1)/2)])
             
             N0=[(self.Delta_x/3*(n2[0,i] + np.sum(2*n2[times_2,i]) + np.sum(4*n2[times_4,i]) + n2[(Nx-1),i])) for i in range(Nx)]
             
@@ -340,7 +355,7 @@ class holographic_grating:
             
             n2=n2.T.reshape(Nx*Nx,)
             
-            Volume1=(trapezoidal_rule_integration(m2)/self.rhom + trapezoidal_rule_integration(p2)/self.rhop + trapezoidal_rule_integration(q2)/self.rhop + trapezoidal_rule_integration(z2)*self.z0/self.rhoz + trapezoidal_rule_integration(b2)/self.rhob)
+            Volume1=(trapezoidal_rule_integration(m2)/self.rhom + trapezoidal_rule_integration(p2)/self.rhop + trapezoidal_rule_integration(q2)/self.rhop + trapezoidal_rule_integration(z2)*z0/self.rhoz + trapezoidal_rule_integration(b2)/self.rhob)
             
             u1 = Volume1/Volume0
             
@@ -391,5 +406,18 @@ class holographic_grating:
             
         optical_properties_DF['eta']=eta
         
-        return spatial_profile_DF, optical_properties_DF, shrinkage_DF
+        end_computation = gettime()
         
+        computation_duration = end_computation-start_computation
+        
+        return spatial_profile_DF, optical_properties_DF, shrinkage_DF, computation_duration
+        
+if __name__ == "__main__":
+    
+    a = holographic_grating(total_time=0)
+    df1, df2, df3, t0 = a.slanted_grating_simulation_v22()
+    assert len(df3) == 1
+    assert len(df2) == a.Nx
+    assert len(df1) == a.Nx*a.Nx
+    del a, df1, df2, df3, t0
+    print("All tests passed.")
