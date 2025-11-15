@@ -414,11 +414,12 @@ class HolographicGrating:
         
 if __name__ == "__main__":
     
-    a = holographic_grating(total_time=0)
+    a = HolographicGrating(total_time=0)
     df1, df2, df3, t0 = a.slanted_grating_simulation_v22()
     assert len(df3) == 1
     assert len(df2) == a.Nx
     assert len(df1) == a.Nx*a.Nx
     del a, df1, df2, df3, t0
     print("All tests passed.")
+
 
