@@ -6,7 +6,7 @@ from math import pi, factorial
 from numpy.linalg import inv
 from time import time as gettime
 
-class holographic_grating:
+class HolographicGrating:
     
     def __init__(
             self, 
@@ -421,3 +421,4 @@ if __name__ == "__main__":
     assert len(df1) == a.Nx*a.Nx
     del a, df1, df2, df3, t0
     print("All tests passed.")
+
