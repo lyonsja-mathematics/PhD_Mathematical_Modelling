@@ -79,7 +79,7 @@ class HolographicGrating:
         self.output_time_step = output_time_step
         
     
-    def slanted_grating_simulation_v22(self):
+    def run_simulation(self):
         
         start_computation = gettime()
         # 1.2 --- Define parameters
@@ -157,7 +157,7 @@ class HolographicGrating:
         Y1=np.sort(Y1)    
         indexDF=pd.DataFrame({'x':x1, 'y':Y1})
         
-        spatial_profile_DF=pd.DataFrame({"x": x1, 'Y': Y1, "monomer": m1, "short_polymer": p1, "immobile_polymer": q1, 'nanoparticles': z1, 'binder':b1, 'refractive_index': n1, "time": np.zeros(len(n1)), 'N0':np.zeros(len(n1))+Initial_RI, 'Delta_n':np.zeros(len(n1)), 'd2':np.zeros(len(n1))})
+        spatial_profile_DF=pd.DataFrame({"x": x1, 'Y': Y1, "monomer": m1, "short_polymer": p1, "immobile_polymer": q1, 'nanoparticles': z1, 'binder':b1, 'refractive_index': n1, "time": np.zeros(len(n1))})
         
         optical_properties_DF=pd.DataFrame({'Y': Y, "time": np.zeros(len(Y)), 'N0':np.zeros(len(Y))+Initial_RI,'Delta_n':np.zeros(len(Y)),'nu':np.zeros(len(Y)),'d2':np.zeros(len(Y))})
         
@@ -167,7 +167,7 @@ class HolographicGrating:
             
             array=array.reshape(Nx,Nx).T
             
-            return Delta_x*Delta_x/4*(array[0,0] + array[Nx-1,0] + array[0,Nx-1] + array[Nx-1,Nx-1] + np.sum(2*array[0,1:(Nx-1)]) + np.sum(2*array[1:(Nx-1),0]) + np.sum(2*array[Nx-1,1:(Nx-1)]) + np.sum(2*array[1:(Nx-1),Nx-1]) + np.sum(4*array[1:(Nx-1),1:(Nx-1)]))
+            return self.Delta_x*self.Delta_x/4*(array[0,0] + array[Nx-1,0] + array[0,Nx-1] + array[Nx-1,Nx-1] + np.sum(2*array[0,1:(Nx-1)]) + np.sum(2*array[1:(Nx-1),0]) + np.sum(2*array[Nx-1,1:(Nx-1)]) + np.sum(2*array[1:(Nx-1),Nx-1]) + np.sum(4*array[1:(Nx-1),1:(Nx-1)]))
         
         def simpsons_rule_1D(arr1D):
             
@@ -175,7 +175,7 @@ class HolographicGrating:
             times_4=[i for i in intpts if i%2!=0]
             times_2=[i for i in intpts if i%2==0]
             
-            return Delta_x/3*(arr1D[0] + 4*sum(arr1D[times_4]) + 2*sum(arr1D[times_2]) + arr1D[len(arr1D)-1])
+            return self.Delta_x/3*(arr1D[0] + 4*sum(arr1D[times_4]) + 2*sum(arr1D[times_2]) + arr1D[len(arr1D)-1])
         
         
         
@@ -408,18 +408,20 @@ class HolographicGrating:
         
         end_computation = gettime()
         
-        computation_duration = end_computation-start_computation
+        self.computation_duration = end_computation-start_computation
         
-        return spatial_profile_DF, optical_properties_DF, shrinkage_DF, computation_duration
+        self.spatial_profile_DF = spatial_profile_DF
+        
+        self.optical_properties_DF = optical_properties_DF
+        
+        self.shrinkage_DF = shrinkage_DF
         
 if __name__ == "__main__":
     
     a = HolographicGrating(total_time=0)
-    df1, df2, df3, t0 = a.slanted_grating_simulation_v22()
-    assert len(df3) == 1
-    assert len(df2) == a.Nx
-    assert len(df1) == a.Nx*a.Nx
-    del a, df1, df2, df3, t0
+    a.run_simulation()
+    assert len(a.shrinkage_DF) == 1
+    assert len(a.optical_properties_DF) == a.Nx
+    assert len(a.spatial_profile_DF) == a.Nx*a.Nx
+    del a
     print("All tests passed.")
-
-
