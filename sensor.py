@@ -17,9 +17,17 @@ from math import pi, factorial
 from numpy.linalg import inv
 from time import time as gettime
 
+def simpsons_rule_1D(array_1D, step):
+    
+    intpts=list(range(1,len(array_1D)-1))
+    times_4=[i for i in intpts if i%2!=0]
+    times_2=[i for i in intpts if i%2==0]
+    
+    return step/3*(array_1D[0] + 4*sum(array_1D[times_4]) + 2*sum(array_1D[times_2]) + array_1D[len(array_1D)-1])
+
 # 1.1 --- Define function inputs and default values.
 #def sensor_2D_model_v2(
-    
+
 	grating#,
 	n_s=1.33#,
 	n_a=2#,
@@ -60,29 +68,31 @@ if "spatial_profile_DF" not in dir(grating):
     times_4 = [interior_points[i] for i in range(len(interior_points)) if interior_points[i]%2 != 0]
     times_2 = [interior_points[i] for i in range(len(interior_points)) if interior_points[i]%2 == 0]
 	
-	spdf0 = grating.spatial_profile_DF[grating.spatial_profile_DF.time == max(grating.spatial_profile_DF.time)].reset_index(drop=True)
+    final_time = max(grating.spatial_profile_DF.time)
+	pre_exposure_spatial_profile_DF = grating.spatial_profile_DF[grating.spatial_profile_DF.time == final_time].reset_index(drop=True)
 	
     lpmm = grating.lpmm
     
     b0 = grating.b0
     
-    sdf0 = grating.shrinkage_DF[grating.shrinkage_DF.time == max(grating.shrinkage_DF.time)].reset_index(drop=True)
+    final_grating_properties = grating.shrinkage_DF[grating.shrinkage_DF.time == max(grating.shrinkage_DF.time)].reset_index(drop=True)
+    final_grating_properties = final_grating_properties[['time','phi_t','Lambda_t','theta_B','Thickness','Mean_RI']]
     
-    Lambda_1 = sdf0.Lambda_t[0]
+    Lambda_0 = final_grating_properties.Lambda_t[0]
     
-    phi_r_1 = sdf0.phi_t[0]
+    phi_0 = final_grating_properties.phi_t[0]
     
-    theta_B1 = sdf0.theta_B[0]
+    theta_B_0 = sdf0.theta_B[0]
     
-    T_1 = sdf0.Thickness[0]
+    T_0 = final_grating_properties.Thickness[0]
     
-    Mean_RI = sdf0.Mean_RI[0]
+    Mean_RI_0 = final_grating_properties.Mean_RI[0]
     
-	x_hat = Lambda_1/np.cos(phi_r_1)
+	x_hat = Lambda_1/np.cos(phi_0)
 	
-	y_hat = Lambda_1/np.sin(phi_r_1)
+	y_hat = Lambda_1/np.sin(phi_0)
 	
-	lambda_r_1 = 2*Mean_RI*Lambda_1*np.sin(phi_r_1)
+	lambda_r_0 = 2*Mean_RI_0*Lambda_0*np.sin(phi_0)
     
     n_ze = grating.n_z
 	
@@ -115,23 +125,25 @@ if "spatial_profile_DF" not in dir(grating):
 	omega_s=s0/grating.z0/tau_e_s
 	
     
-	n_before_exposure = np.array(spdf0.refractive_index)
+	n_before_exposure = np.array(pre_exposure_spatial_profile_DF.refractive_index)
 	n_b = grating.n_b
 	n_m = grating.n_m
 	n_p = grating.n_p
 	n_q = grating.n_q
 	
-	free_surface = list(spdf0[spdf0.Y == 1].index)
-	fixed_surface = list(spdf0[spdf0.Y == 0].index)
+	free_surface = list(pre_exposure_spatial_profile_DF[pre_exposure_spatial_profile_DF.Y == 1].index)
+	fixed_surface = list(pre_exposure_spatial_profile_DF[pre_exposure_spatial_profile_DF.Y == 0].index)
 	
 	b1 = np.ones(Nx*Nx)
-	m1 = np.array(spdf0.monomer)
-	p1 = np.array(spdf0.short_polymer)
-	q1 = np.array(spdf0.immobile_polymer)
-	if grating.z0 == 0:
+	m1 = np.array(pre_exposure_spatial_profile_DF.monomer)
+	p1 = np.array(pre_exposure_spatial_profile_DF.short_polymer)
+	q1 = np.array(pre_exposure_spatial_profile_DF.immobile_polymer)
+	
+    if grating.z0 == 0:
         ze1 = np.zeros(Nx*Nx)
+    
     else:
-        ze1 = np.array(spdf0.nanoparticles)
+        ze1 = np.array(pre_exposure_spatial_profile_DF.nanoparticles)
     
     s1 = np.zeros(Nx*Nx); s1[free_surface] = 1
     a1 = np.zeros(Nx*Nx); a1[free_surface] = 1
@@ -148,16 +160,23 @@ if "spatial_profile_DF" not in dir(grating):
 	zs = zs1
 	za = za1
     
-    spdf1 = spdf0.rename(columns={'nanoparticles':'nanoparticles_vacant'})
-    spdf1.time = 0
-    spdf1['nanoparticles_analyte'] = za1
-    spdf1['nanoparticles_solvent'] = zs1
-    spdf1['analyte'] = a1
-    spdf1['solvent'] = s1
+    spatial_profile_DF = pre_exposure_spatial_profile_DF.rename(columns={'nanoparticles':'nanoparticles_vacant'})
+    spatial_profile_DF.time = 0
+    spatial_profile_DF['nanoparticles_analyte'] = za1
+    spatial_profile_DF['nanoparticles_solvent'] = zs1
+    spatial_profile_DF['analyte'] = a1
+    spatial_profile_DF['solvent'] = s1
     
-    def calculate_RI(mass_distributions = [grating.b0*b1,m1,p1,q1,
-                          grating.z0*ze1,grating.z0*zs1,grating.z0*za1,
-                          s0*s1,a0*a1]):
+    def calculate_RI(solvent, analyte, vacant_nanoparticles, 
+                     solvent_occupied_nanoparticles, 
+                     analyte_occupied_nanoparticles):
+        
+        mass_distributions = [grating.b0*b1,m1,p1,q1,
+                              grating.z0*vacant_nanoparticles,
+                              grating.z0*solvent_occupied_nanoparticles,
+                              grating.z0*analyte_occupied_nanoparticles,
+                              s0*solvent,
+                              a0*analyte]
         
         densities = [grating.rhob,grating.rhom,grating.rhop,grating.rhop,
                  grating.rhoz,grating.rhoz,grating.rhoz,
@@ -179,58 +198,141 @@ if "spatial_profile_DF" not in dir(grating):
             
         return np.sqrt((2*Lorentz_Lorenz_RHS + 1)/(1 - Lorentz_Lorenz_RHS))
     
-    spdf1['refractive_index'] = calculate_RI()
+    n1 = calculate_RI(s1, a1, ze1, zs1, za1)
+    spatial_profile_DF['refractive_index'] = n1
     
-    x = np.array(spdf0.x)
-    Y = np.array(spdf0.Y)
+    x1 = np.array(pre_exposure_spatial_profile_DF.x)
+    Y1 = np.array(pre_exposure_spatial_profile_DF.Y)
 		
 	matrix_m = m1.reshape(Nx,Nx).T
 	matrix_p = p1.reshape(Nx,Nx).T
 	matrix_q = q1.reshape(Nx,Nx).T
-	matrix_a = a1.reshape(Nx,Nx).T
-	matrix_s = s1.reshape(Nx,Nx).T
 	
 	int_m_dx_dy=Delta_x*Delta_x/4*(matrix_m[0,0] + matrix_m[Nx-1,0] + matrix_m[0,Nx-1] + matrix_m[Nx-1,Nx-1] + np.sum(2*matrix_m[0,range(1, Nx-1)]) + np.sum(2*matrix_m[range(1, Nx-1),0]) + np.sum(2*matrix_m[Nx-1,range(1, Nx-1)]) + np.sum(2*matrix_m[range(1, Nx-1),Nx-1]) + np.sum(4*matrix_m[range(1, Nx-1),range(1, Nx-1)]) )
 	
 	int_p_dx_dy=Delta_x*Delta_x/4*(matrix_p[0,0] + matrix_p[Nx-1,0] + matrix_p[0,Nx-1] + matrix_p[Nx-1,Nx-1] + np.sum(2*matrix_p[0,range(1, Nx-1)]) + np.sum(2*matrix_p[range(1, Nx-1),0]) + np.sum(2*matrix_p[Nx-1,range(1, Nx-1)]) + np.sum(2*matrix_p[range(1, Nx-1),Nx-1]) + np.sum(4*matrix_p[range(1, Nx-1),range(1, Nx-1)]) )
 	
 	int_q_dx_dy=Delta_x*Delta_x/4*(matrix_q[0,0] + matrix_q[Nx-1,0] + matrix_q[0,Nx-1] + matrix_q[Nx-1,Nx-1] + np.sum(2*matrix_q[0,range(1, Nx-1)]) + np.sum(2*matrix_q[range(1, Nx-1),0]) + np.sum(2*matrix_q[Nx-1,range(1, Nx-1)]) + np.sum(2*matrix_q[range(1, Nx-1),Nx-1]) + np.sum(4*matrix_q[range(1, Nx-1),range(1, Nx-1)]) )
+    
+    def calculate_volume(solvent, analyte):
+        
+        matrix_a = analyte.reshape(Nx,Nx).T
+        
+        matrix_s = solvent.reshape(Nx,Nx).T
+        
+        int_a_dx_dy=Delta_x*Delta_x/4*(matrix_a[0,0] + matrix_a[Nx-1,0] + matrix_a[0,Nx-1] + matrix_a[Nx-1,Nx-1] + np.sum(2*matrix_a[0,range(1, Nx-1)]) + np.sum(2*matrix_a[range(1, Nx-1),0]) + np.sum(2*matrix_a[Nx-1,range(1, Nx-1)]) + np.sum(2*matrix_a[range(1, Nx-1),Nx-1]) + np.sum(4*matrix_a[range(1, Nx-1),range(1, Nx-1)]) )
+        
+        int_s_dx_dy=Delta_x*Delta_x/4*(matrix_s[0,0] + matrix_s[Nx-1,0] + matrix_s[0,Nx-1] + matrix_s[Nx-1,Nx-1] + np.sum(2*matrix_s[0,range(1, Nx-1)]) + np.sum(2*matrix_s[range(1, Nx-1),0]) + np.sum(2*matrix_s[Nx-1,range(1, Nx-1)]) + np.sum(2*matrix_s[range(1, Nx-1),Nx-1]) + np.sum(4*matrix_s[range(1, Nx-1),range(1, Nx-1)]) )
+        
+        return b0/grating.rhob + int_m_dx_dy/grating.rhom + int_p_dx_dy/grating.rhop + int_q_dx_dy/grating.rhop + grating.z0/grating.rhoz + a0*int_a_dx_dy/rhoa + s0*int_s_dx_dy/rhos
+    
+    Volume0 = calculate_volume(s1, a1)
+    
+    #@simpsons_rule_1D
+    def calculate_optical_properties(RI, Nx = grating.Nx, Delta_x = grating.Delta_x):
+        
+        n2=RI.reshape(Nx,Nx).T
+        
+        midpoint = int((Nx-1)/2)
+        inside_ri = simpsons_rule_1D(n2[midpoint], step=Delta_x)
+        
+        mean_ri = np.mean(n2)
+        
+        N0=[(Delta_x/3*(n2[0,i] + np.sum(2*n2[times_2,i]) + np.sum(4*n2[times_4,i]) + n2[(Nx-1),i])) for i in range(Nx)]
+        
+        n2_cos=np.zeros(n2.shape)
+        x = np.linspace(0,1,Nx)
+        for i in range(Nx):
+            n2_cos[:,i] = n2[:,i]*np.cos(2*pi*x)
+            
+        n2_sin=np.zeros(n2.shape)
+        for i in range(Nx):
+            n2_sin[:,i] = n2[:,i]*np.sin(2*pi*x)
+        
+        N1_a=np.array([2*Delta_x/3*(n2_cos[0,i] + np.sum(2*n2_cos[times_2,i]) + np.sum(4*n2_cos[times_4,i]) + n2_cos[(Nx-1),i]) for i in range(Nx)])
+        
+        N1_b=np.array([2*Delta_x/3*(n2_sin[0,i] + np.sum(2*n2_sin[times_2,i]) + np.sum(4*n2_sin[times_4,i]) + n2_sin[(Nx-1),i]) for i in range(Nx)])
+        
+        Delta_n=np.sqrt(N1_a*N1_a+N1_b*N1_b)
+        
+        n_tilde=np.ones((Nx,Nx))
+        for i in range(Nx):
+            n_tilde[:,i]=N0[i]*n_tilde[:,i] + N1_a[i]*np.cos(2*pi*x) + N1_b[i]*np.sin(2*pi*x)
+        
+        sq_diff=(n2 - n_tilde)**2
+        
+        d2=[(Delta_x/3*(sq_diff[0,i] + np.sum(2*sq_diff[times_2,i]) + np.sum(4*sq_diff[times_4,i]) + sq_diff[(Nx-1),i])) for i in range(Nx)]
+        
+        u1 = calculate_volume(s1, a1)/Volume0
+        
+        actual_shrinkage = 1-u1
+      
+        phi_1=np.arctan(np.tan(phi_0)/u1)
+      
+        Lambda_1=np.cos(phi_1)/np.cos(phi_0)*Lambda_0
+        
+        y_hat_1=Lambda_1/np.sin(phi_1)
+      
+        theta_B_1=np.arcsin(grating.lambda_probe/2/inside_ri/Lambda_1)-phi_1
+      
+        Delta_theta_B = theta_B_0-theta_B_1
+      
+        nu=pi*Delta_n*T_0*u1/lambda_probe/np.cos(theta_B_1)
+        
+        lambda_r=2*mean_ri*Lambda_1*np.sin(theta_B_1 + phi_1)
+        
+        return mean_ri, Delta_n, theta_B_1, nu, lambda_r
+        
+    pre_exposure_Mean_RI, pre_exposure_Delta_n, pre_exposure_theta_B, pre_exposure_nu, pre_exposure_lambda_r = calculate_optical_properties(n1)
+    
+	optical_properties_DF = pd.DataFrame({
+        'time':np.zeros(Nx),
+        'Y': np.linspace(0, 1, Nx),
+        'Delta_n': pre_exposure_Delta_n,
+        'nu': pre_exposure_nu})
+    
+    Bragg_Angle_Wavelength_DF = pd.DataFrame({
+        'time': [0],
+        'theta_B': pre_exposure_theta_B,
+        'Mean_RI': pre_exposure_Mean_RI,
+        'lambda_r': pre_exposure_lambda_r})
 	
-	int_a_dx_dy=Delta_x*Delta_x/4*(matrix_a[0,0] + matrix_a[Nx-1,0] + matrix_a[0,Nx-1] + matrix_a[Nx-1,Nx-1] + np.sum(2*matrix_a[0,range(1, Nx-1)]) + np.sum(2*matrix_a[range(1, Nx-1),0]) + np.sum(2*matrix_a[Nx-1,range(1, Nx-1)]) + np.sum(2*matrix_a[range(1, Nx-1),Nx-1]) + np.sum(4*matrix_a[range(1, Nx-1),range(1, Nx-1)]) )
-	
-	int_s_dx_dy=Delta_x*Delta_x/4*(matrix_s[0,0] + matrix_s[Nx-1,0] + matrix_s[0,Nx-1] + matrix_s[Nx-1,Nx-1] + np.sum(2*matrix_s[0,range(1, Nx-1)]) + np.sum(2*matrix_s[range(1, Nx-1),0]) + np.sum(2*matrix_s[Nx-1,range(1, Nx-1)]) + np.sum(2*matrix_s[range(1, Nx-1),Nx-1]) + np.sum(4*matrix_s[range(1, Nx-1),range(1, Nx-1)]) )
-	
-	volume1=b0/grating.rhob + int_m_dx_dy/grating.rhom + int_p_dx_dy/grating.rhop + int_q_dx_dy/grating.rhop + grating.z0/grating.rhoz + a0*int_a_dx_dy/rhoa + s0*int_s_dx_dy/rhos
-	
-	# 3.1 --- Diffusion of target a
+    # 3.1 --- Diffusion of target a
 	alpha_s_x=Ds*t0/x_hat/x_hat
 	alpha_a_x=Da*t0/x_hat/x_hat
 	alpha_s_y=Ds*t0/T_1/T_1
 	alpha_a_y=Da*t0/T_1/T_1
 	gamma_ss=gamma_s*grating.z0*t0
+    
     if s0==0:
         omega_ss = 0
+        
     else:
         omega_ss = omega_s*grating.z0*t0/s0
-	gamma_sz=gamma_s*s0*t0
+	
+    gamma_sz=gamma_s*s0*t0
 	omega_sz=omega_s*t0
 	gamma_aa=gamma_a*grating.z0*t0
+
     if a0==0:
         omega_aa = 0
+
     else:
         omega_aa = omega_a*grating.z0*t0/a0
-	gamma_az=gamma_a*a0*t0
+	
+    gamma_az=gamma_a*a0*t0
 	omega_az=omega_a*t0
 	
-	n_iterations = exposure_time/Delta_t + 1# Total number of iterations
+    n_iterations = exposure_time/Delta_t + 1# Total number of iterations
     
-    time_vals = list(range(0, exposure_time, output_time_step))
+    time_vals = list(range(0, exposure_time+1, output_time_step))
 	
-	if exposure_time < output_time_step:
+    if exposure_time < output_time_step:
         bind_iter = 0
+         
     else:
-        bind_iter = [i/Delta_t + 1 for i in time_vals]
-		bind_iter = bind_iter[1::]
+        bind_iter = [i/Delta_t for i in time_vals]
+        bind_iter = bind_iter[1::]
 	
 	# Simulation of holographic grating exposed to a loaded solvent
 	for j in range(0, n_iterations):
@@ -264,22 +366,22 @@ if "spatial_profile_DF" not in dir(grating):
         
         for i in range(0, Nx*Nx):
             
-            if i in list(spdf0[spdf0.x == 0].index):
+            if i in list(pre_exposure_spatial_profile_DF[pre_exposure_spatial_profile_DF.x == 0].index):
                 i_minus_1 = i + Nx - 2
             else:
                 i_minus_1 = i - 1
                 
-            if i in list(spdf0[spdf0.x == 1].index):
+            if i in list(pre_exposure_spatial_profile_DF[pre_exposure_spatial_profile_DF.x == 1].index):
                 i_plus_1 = i - Nx + 2
             else:
                 i_plus_1 =  i + 1
     
-            if i in list(spdf0[spdf0.Y == 0].index):
+            if i in list(pre_exposure_spatial_profile_DF[pre_exposure_spatial_profile_DF.Y == 0].index):
                 j_minus_1 = i + Nx
             else:
                 j_minus_1 = i - Nx
                 
-            if i in list(spdf0[spdf0.Y == 1].index):
+            if i in list(pre_exposure_spatial_profile_DF[pre_exposure_spatial_profile_DF.Y == 1].index):
                 j_plus_1 = i - Nx
             else:
                 j_plus_1 = i + Nx
@@ -306,18 +408,21 @@ if "spatial_profile_DF" not in dir(grating):
 				    	
 		
         a2 = np.matmul(inv(AA2), np.matmul(AA1, a1) + 2*Delta_t*omega_aa*za1)
-        #solve(AA2) %*% ((AA1 %*% matrix(a1, ncol=1)) + matrix(2*Delta_t*omega_aa*za1, ncol=1))
-		s2 = np.matmul(inv(SS2), np.matmul(SS1, s1) + 2*Delta_t*omega_ss*zs1)
-        #solve(SS2) %*% ((SS1 %*% matrix(s1, ncol=1)) + matrix(2*Delta_t*omega_ss*zs1, ncol=1))
+        
+        s2 = np.matmul(inv(SS2), np.matmul(SS1, s1) + 2*Delta_t*omega_ss*zs1)
+        
         ze2 = np.matmul(inv(ZEZE2), np.matmul(ZEZE1, ze1) + 2*omega_az*Delta_t*za1 + 2*omega_sz*Delta_t*zs1)
-      #solve(ZEZE2) %*% ((ZEZE1 %*% matrix(ze1, ncol=1)) + matrix(2*omega_az*Delta_t*za1, ncol=1) + matrix(2*omega_sz*Delta_t*zs1, ncol=1))
+        
         za2 = np.matmul(inv(ZAZA2), np.matmul(ZAZA1, za1) + 2*Delta_t*gamma_az*a1*ze1)
-      #solve(ZAZA2) %*% ((ZAZA1 %*% matrix(za1, ncol=1)) + matrix(2*Delta_t*gamma_az*a1*ze1, ncol=1))
+        
         zs2 = np.matmul(inv(ZSZS2), np.matmul(ZSZS1, zs1) + 2*Delta_t*gamma_sz*s1*ze1)
-      #solve(ZSZS2) %*% ((ZSZS1 %*% matrix(zs1, ncol=1)) + matrix(2*Delta_t*gamma_sz*s1*ze1, ncol=1))
+        
         b2 = np.matmul(inv(BB2), np.matmul(BB1, b1))
+        
         m2 = np.matmul(inv(MM2), np.matmul(MM1, m1))
+        
         p2 = np.matmul(inv(PP2), np.matmul(PP1, p1))
+        
         q2 = np.matmul(inv(QQ2), np.matmul(QQ1, q1))
         	  
 	  a2[free_surface]=1
@@ -333,80 +438,41 @@ if "spatial_profile_DF" not in dir(grating):
 	  p1 = p2
 	  q1 = q2
       
-      Vb = b1/grating.rhob # cm**3
-      Vm = m1*m0/grating.rhom # cm**3
-      Vp = p1*m0/grating.rhop # cm**3
-      Vq = q1*m0/grating.rhop # cm**3
-      Vze = ze1*grating.z0/grating.rhoz # cm**3
-      Vzs = zs1*grating.z0/grating.rhoz # cm**3
-      Vza = za1*grating.z0/grating.rhoz # cm**3
-      Vs = s1/rhos # cm**3
-      Va = a1/rhoa # cm**3
-      Vtotal=Vb+Vm+Vp+Vq+Vze+Vzs+Vza+Vs+Va # cm**3
-      phi_m = Vm/Vtotal
-      phi_b = Vb/Vtotal
-      phi_p = Vp/Vtotal
-      phi_q = Vq/Vtotal
-      phi_z = Vz/Vtotal
+      n1 = calculate_RI(s1, a1, ze1, zs1, za1)
       
-      Lorentz_Lorenz_RHS = phi_m*(grating.n_m*grating.n_m - 1)/(grating.n_m*grating.n_m + 2) + phi_b*(grating.n_b*grating.n_b - 1)/(grating.n_b*grating.n_b + 2) + phi_p*(grating.n_p*grating.n_p - 1)/(grating.n_p*grating.n_p + 2) + phi_q*(grating.n_q*grating.n_q - 1)/(grating.n_q*grating.n_q + 2) + phi_z*(grating.n_z*grating.n_z - 1)/(grating.n_z*grating.n_z + 2)
+      new_Mean_RI, new_Delta_n, new_theta_B, new_nu, new_lambda_r = calculate_optical_properties(n1)
       
-      n2=np.sqrt((2*Lorentz_Lorenz_RHS + 1)/(1 - Lorentz_Lorenz_RHS))
-      n2=n2.reshape(Nx,Nx).T
-      
-      inside_ri = simpsons_rule_1D(n2[int((Nx-1)/2)])
-      
-      N0=[(grating.Delta_x/3*(n2[0,i] + np.sum(2*n2[times_2,i]) + np.sum(4*n2[times_4,i]) + n2[(Nx-1),i])) for i in range(Nx)]
-      
-      n2_cos=np.zeros(n2.shape)
-      for i in range(Nx):
-          n2_cos[:,i] = n2[:,i]*np.cos(2*pi*x)
+      if j*Delta_t in time_vals:
           
-      n2_sin=np.zeros(n2.shape)
-      for i in range(Nx):
-          n2_sin[:,i] = n2[:,i]*np.sin(2*pi*x)
-      
-      N1_a=np.array([2*grating.Delta_x/3*(n2_cos[0,i] + np.sum(2*n2_cos[times_2,i]) + np.sum(4*n2_cos[times_4,i]) + n2_cos[(Nx-1),i]) for i in range(Nx)])
-      
-      N1_b=np.array([2*grating.Delta_x/3*(n2_sin[0,i] + np.sum(2*n2_sin[times_2,i]) + np.sum(4*n2_sin[times_4,i]) + n2_sin[(Nx-1),i]) for i in range(Nx)])
-      
-      n_tilde=np.ones((Nx,Nx))
-      for i in range(Nx):
-          n_tilde[:,i]=N0[i]*n_tilde[:,i] + N1_a[i]*np.cos(2*pi*x) + N1_b[i]*np.sin(2*pi*x)
-      
-      sq_diff=(n2 - n_tilde)**2
-      
-      d2=[(grating.Delta_x/3*(sq_diff[0,i] + np.sum(2*sq_diff[times_2,i]) + np.sum(4*sq_diff[times_4,i]) + sq_diff[(Nx-1),i])) for i in range(Nx)]
-      
-      n2=n2.T.reshape(Nx*Nx,)
-      
-      Volume1=(trapezoidal_rule_integration(m2)/grating.rhom + trapezoidal_rule_integration(p2)/grating.rhop + trapezoidal_rule_integration(q2)/grating.rhop + trapezoidal_rule_integration(z2)*grating.z0/grating.rhoz + trapezoidal_rule_integration(b2)/grating.rhob)
-      
-      u1 = Volume1/Volume0
-      
-      phi_1=np.arctan(np.tan(phi_0)/u1)
-      
-      Lambda1=np.cos(phi_1)/np.cos(phi_0)*Lambda0
-      
-      y_hat1=Lambda1/np.sin(phi_1)
-      
-      theta_B=np.arcsin(grating.lambda_probe/2/inside_ri/Lambda1)-phi_1
-      
-      Delta_theta_B=theta_B0-theta_B,
-      
-      Delta_n=np.sqrt(N1_a*N1_a+N1_b*N1_b)
-      
-      nu=pi*Delta_n*grating.T0*u1/grating.lambda_probe/np.cos(theta_B)
-	  
-	  if j*Delta_t in time_vals:
-          
-          spdf1 = pd.concat([spdf1, 
+          spatial_profile_DF = pd.concat([spatial_profile_DF, 
                              pd.DataFrame({
                                  'x':x, 'Y': Y, 
+                                 'time': np.zeros(Nx) + j*Delta_t,
+                                 'binder': b1,
                                  'monomer': m1,
                                  'short_polymer': p1,
                                  'immobile_polymer': q1,
-                                 'nanoparticles_vacant': ze1})])
+                                 'refractive_index': n1,
+                                 'nanoparticles_vacant': ze1,
+                                 'nanoparticles_solvent': zs1,
+                                 'nanoparticles_analyte': za1})])
+          
+          optical_properties_DF = pd.concat([optical_properties_DF,
+                                             pd.DataFrame({
+                                                 'time':np.zeros(Nx) + j*Delta_t,
+                                                 'Y': np.linspace(0, 1, Nx),
+                                                 'Delta_n': pre_exposure_Delta_n,
+                                                 'nu': pre_exposure_nu})])
+          
+          Bragg_Angle_Wavelength_DF = pd.concat([Bragg_Angle_Wavelength_DF,
+                                                 pd.DataFrame({
+                                                     'time': [j*Delta_t],
+                                                     'theta_B': new_theta_B,
+                                                     'Mean_RI': new_Mean_RI,
+                                                     'lambda_r': new_lambda_r})
+      	
+          
+          
           
           
           
@@ -509,7 +575,7 @@ if "spatial_profile_DF" not in dir(grating):
   
   cbind(df_b,m=df_m$m,p=df_p$p, q=df_q$q, ze=df_ze$ze, za=df_za$za, zs=df_zs$zs, a=df_a$a, s=df_s$s, n_after_exposure=df_n$n_after_exposure) -> df1
 	
-	Nt = length(time)
+  Nt = length(time)
   N0=matrix(0, nrow=Nt, ncol=Nx)
   N1a=matrix(0, nrow=Nt, ncol=Nx)
   N1b=matrix(0, nrow=Nt, ncol=Nx)
@@ -586,7 +652,7 @@ delta=melt(delta)$value
   }
   
   df1 %>% mutate(
-  	theta_B = asin(lambda_probe/2/Mean_RI/Lambda_1) - phi_r_1,
+  	theta_B = asin(lambda_probe/2/Mean_RI/Lambda_1) - phi_0,
   	Delta_theta_B = theta_B1 - theta_B,
   	Delta_phi_r = 0
   ) -> df1
