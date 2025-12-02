@@ -79,7 +79,6 @@ class HolographicGrating:
         self.output_time_step = output_time_step
         
     
-    def run_simulation(self):
         
         start_computation = gettime()
         # 1.2 --- Define parameters
@@ -419,9 +418,9 @@ class HolographicGrating:
 if __name__ == "__main__":
     
     a = HolographicGrating(total_time=0)
-    a.run_simulation()
     assert len(a.shrinkage_DF) == 1
     assert len(a.optical_properties_DF) == a.Nx
     assert len(a.spatial_profile_DF) == a.Nx*a.Nx
     del a
     print("All tests passed.")
+
