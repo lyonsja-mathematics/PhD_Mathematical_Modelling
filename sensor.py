@@ -25,8 +25,7 @@ def simpsons_rule_1D(array_1D, step):
     
     return step/3*(array_1D[0] + 4*sum(array_1D[times_4]) + 2*sum(array_1D[times_2]) + array_1D[len(array_1D)-1])
 
-# 1.1 --- Define function inputs and default values.
-#def sensor_2D_model_v2(
+def sensor(
 
 	grating#,
 	n_s=1.33#,
@@ -45,13 +44,11 @@ def simpsons_rule_1D(array_1D, step):
 	Ds=2.3e-5#,# cm2/s
 	lambda_probe=633e-7#,# cm
 	exposure_time=180#,# seconds
-	output_time_step=5# seconds
-	
-#){
-
-if "spatial_profile_DF" not in dir(grating):
+	output_time_step=5):
     
-    return warn("Sensor needs a theoretically modelled holographic grating")
+    if "spatial_profile_DF" not in dir(grating):
+    
+        return warn("Sensor needs a theoretically modelled holographic grating")
 
 
 	if grating.slant_angle==0:
@@ -82,24 +79,20 @@ if "spatial_profile_DF" not in dir(grating):
     
     phi_0 = final_grating_properties.phi_t[0]
     
-    theta_B_0 = sdf0.theta_B[0]
+    theta_B_0 = final_grating_properties.theta_B[0]
     
     T_0 = final_grating_properties.Thickness[0]
     
     Mean_RI_0 = final_grating_properties.Mean_RI[0]
     
-	x_hat = Lambda_1/np.cos(phi_0)
+	x_hat = Lambda_0/np.cos(phi_0)
 	
-	y_hat = Lambda_1/np.sin(phi_0)
+	y_hat = Lambda_0/np.sin(phi_0)
 	
 	lambda_r_0 = 2*Mean_RI_0*Lambda_0*np.sin(phi_0)
     
     n_ze = grating.n_z
-	
-	#LLRHS = phi_interior*((ns*ns - 1)/(ns*ns + 2)) + ((nze*nze - 1)/(nze*nze + 2))
-	
-	#nzs = sqrt((2*LLRHS + 1)/(1 - LLRHS))
-	
+		
 	t0=1
 	
 	m0=1
@@ -123,7 +116,11 @@ if "spatial_profile_DF" not in dir(grating):
 	gamma_s=1/grating.z0/tau_c_s
 	omega_a=a0/grating.z0/tau_e_a
 	omega_s=s0/grating.z0/tau_e_s
-	
+    
+    tau_y_s=T_0*T_0/Ds
+    tau_y_a=T_0*T_0/Da
+    tau_x_s=x_hat*x_hat/Ds
+    tau_x_a=x_hat*x_hat/Da
     
 	n_before_exposure = np.array(pre_exposure_spatial_profile_DF.refractive_index)
 	n_b = grating.n_b
@@ -276,20 +273,39 @@ if "spatial_profile_DF" not in dir(grating):
         theta_B_1=np.arcsin(grating.lambda_probe/2/inside_ri/Lambda_1)-phi_1
       
         Delta_theta_B = theta_B_0-theta_B_1
-      
+        
         nu=pi*Delta_n*T_0*u1/lambda_probe/np.cos(theta_B_1)
         
         lambda_r=2*mean_ri*Lambda_1*np.sin(theta_B_1 + phi_1)
         
-        return mean_ri, Delta_n, theta_B_1, nu, lambda_r
+        if grating.Klein_Cook < 10:
+            
+            xi=0
+            J0=nu/2
+            J1=J0
+      	
+            for l in range(1,101):
+                
+                J1 = J1 + ((-1)**l)/factorial(l)/factorial(l+1)*J0**(2*l + 1)
+                  
+            eta=J1*J1
+            
+        else:
+            
+            xi=pi*T_0*u1*(phi_1 - phi_0)/Lambda_1
+            
+            eta = np.sin(np.sqrt(xi*xi + nu*nu))**2/np.sqrt(1 + (xi*xi)/(nu*nu))
         
-    pre_exposure_Mean_RI, pre_exposure_Delta_n, pre_exposure_theta_B, pre_exposure_nu, pre_exposure_lambda_r = calculate_optical_properties(n1)
+        return mean_ri, Delta_n, theta_B_1, nu, lambda_r, eta
+        
+    pre_exposure_Mean_RI, pre_exposure_Delta_n, pre_exposure_theta_B, pre_exposure_nu, pre_exposure_lambda_r, pre_exposure_eta = calculate_optical_properties(n1)
     
 	optical_properties_DF = pd.DataFrame({
         'time':np.zeros(Nx),
         'Y': np.linspace(0, 1, Nx),
         'Delta_n': pre_exposure_Delta_n,
-        'nu': pre_exposure_nu})
+        'nu': pre_exposure_nu,
+        'eta': pre_exposure_eta})
     
     Bragg_Angle_Wavelength_DF = pd.DataFrame({
         'time': [0],
@@ -300,8 +316,8 @@ if "spatial_profile_DF" not in dir(grating):
     # 3.1 --- Diffusion of target a
 	alpha_s_x=Ds*t0/x_hat/x_hat
 	alpha_a_x=Da*t0/x_hat/x_hat
-	alpha_s_y=Ds*t0/T_1/T_1
-	alpha_a_y=Da*t0/T_1/T_1
+	alpha_s_y=Ds*t0/T_0/T_0
+	alpha_a_y=Da*t0/T_0/T_0
 	gamma_ss=gamma_s*grating.z0*t0
     
     if s0==0:
@@ -440,7 +456,7 @@ if "spatial_profile_DF" not in dir(grating):
       
       n1 = calculate_RI(s1, a1, ze1, zs1, za1)
       
-      new_Mean_RI, new_Delta_n, new_theta_B, new_nu, new_lambda_r = calculate_optical_properties(n1)
+      new_Mean_RI, new_Delta_n, new_theta_B, new_nu, new_lambda_r, new_eta = calculate_optical_properties(n1)
       
       if j*Delta_t in time_vals:
           
@@ -461,8 +477,9 @@ if "spatial_profile_DF" not in dir(grating):
                                              pd.DataFrame({
                                                  'time':np.zeros(Nx) + j*Delta_t,
                                                  'Y': np.linspace(0, 1, Nx),
-                                                 'Delta_n': pre_exposure_Delta_n,
-                                                 'nu': pre_exposure_nu})])
+                                                 'Delta_n': new_Delta_n,
+                                                 'nu': new_nu,
+                                                 'eta': new_eta})])
           
           Bragg_Angle_Wavelength_DF = pd.concat([Bragg_Angle_Wavelength_DF,
                                                  pd.DataFrame({
@@ -470,271 +487,5 @@ if "spatial_profile_DF" not in dir(grating):
                                                      'theta_B': new_theta_B,
                                                      'Mean_RI': new_Mean_RI,
                                                      'lambda_r': new_lambda_r})
-      	
-          
-          
-          
-          
-          
-          
-          
-          
-	  	
-	  	matrix(cbind(a, a1), nrow=Nx*Nx) -> a
-	  	matrix(cbind(s, s1), nrow=Nx*Nx) -> s
-	  	matrix(cbind(b, b1), nrow=Nx*Nx) -> b
-	  	matrix(cbind(m, m1), nrow=Nx*Nx) -> m
-	  	matrix(cbind(p, p1), nrow=Nx*Nx) -> p
-	  	matrix(cbind(q, q1), nrow=Nx*Nx) -> q
-	  	matrix(cbind(ze, ze1), nrow=Nx*Nx) -> ze
-	  	matrix(cbind(za, za1), nrow=Nx*Nx) -> za
-	  	matrix(cbind(zs, zs1), nrow=Nx*Nx) -> zs
-	  	
-  	}
-  
-	}
-
-	# Mass concentration data frame
-	x=seq(0,1,Delta_x)
-	time=seq(0,exposure_time,output_time_step)
-	Nt=length(time)
-	
-	data.frame(x=rep(seq(0,1,Delta_x), Nx),Y=sort(rep(seq(0,1,Delta_x), Nx)),a) -> df_a
-	names(df_a)=c("x", "Y", paste0("t",time_vals[1:ncol(a)]))# Rename columns
-	df_a %>% melt(id.vars=c("x","Y")) %>% rename(time=variable, a=value) %>% mutate(time=gsub(x=time,pattern="t", replacement=""), time=time), a=a0*a) %>% arrange(time,Y,x) -> df_a
-	
-	# Solvent mass data frame
-	data.frame(x=rep(seq(0,1,Delta_x), Nx),Y=sort(rep(seq(0,1,Delta_x), Nx)),s) -> df_s
-	names(df_s)=c("x", "Y", paste0("t",time_vals[1:ncol(s)]))# Rename columns
-	df_s %>% melt(id.vars=c("x","Y")) %>% rename(time=variable, s=value) %>% mutate(time=gsub(x=time,pattern="t", replacement=""),time=time), s=s0*s) %>% arrange(time,Y,x) -> df_s
-	
-	# Empty nanozeolite mass data frame
-	data.frame(x=rep(seq(0,1,Delta_x), Nx),Y=sort(rep(seq(0,1,Delta_x), Nx)),ze) -> df_ze
-	names(df_ze)=c("x", "Y", paste0("t",time_vals[1:ncol(ze)]))# Rename columns
-	df_ze %>% melt(id.vars=c("x","Y")) %>% rename(time=variable, ze=value) %>% mutate(time=gsub(x=time,pattern="t", replacement=""),time=time), ze=z0*ze) %>% arrange(time,Y,x) -> df_ze
-	
-	# Analyte-filled nanozeolite mass data frame
-	data.frame(x=rep(seq(0,1,Delta_x), Nx),Y=sort(rep(seq(0,1,Delta_x), Nx)),za) -> df_za
-	names(df_za)=c("x", "Y", paste0("t",time_vals[1:ncol(za)]))# Rename columns
-	df_za %>% melt(id.vars=c("x","Y")) %>% rename(time=variable, za=value) %>% mutate(time=gsub(x=time,pattern="t", replacement=""),time=time), za=z0*za) %>% arrange(time,Y,x) -> df_za
-	
-	# Solvent-filled nanozeolite mass data frame
-	data.frame(x=rep(seq(0,1,Delta_x), Nx),Y=sort(rep(seq(0,1,Delta_x), Nx)),zs) -> df_zs
-	names(df_zs)=c("x", "Y", paste0("t",time_vals[1:ncol(zs)]))# Rename columns
-	df_zs %>% melt(id.vars=c("x","Y")) %>% rename(time=variable, zs=value) %>% mutate(time=gsub(x=time,pattern="t", replacement=""),time=time), zs=z0*zs) %>% arrange(time,Y,x) -> df_zs
-	
-	# Binder data frame
-	data.frame(x=rep(seq(0,1,Delta_x), Nx),Y=sort(rep(seq(0,1,Delta_x), Nx)),b) -> df_b
-	names(df_b)=c("x", "Y", paste0("t",time_vals[1:ncol(b)]))# Rename columns
-	df_b %>% melt(id.vars=c("x","Y")) %>% rename(time=variable, b=value) %>% mutate(time=gsub(x=time,pattern="t", replacement=""),time=time),b=b0*b) %>% arrange(time,Y,x) -> df_b
-	
-	# Monomer data frame
-	data.frame(x=rep(seq(0,1,Delta_x), Nx),Y=sort(rep(seq(0,1,Delta_x), Nx)),m) -> df_m
-	names(df_m)=c("x", "Y", paste0("t",time_vals[1:ncol(m)]))# Rename columns
-	df_m %>% melt(id.vars=c("x","Y")) %>% rename(time=variable, m=value) %>% mutate(time=gsub(x=time,pattern="t", replacement=""),time=time),m=m) %>% arrange(time,Y,x) -> df_m
-	
-	# Short polymer data frame
-	data.frame(x=rep(seq(0,1,Delta_x), Nx),Y=sort(rep(seq(0,1,Delta_x), Nx)),p) -> df_p
-	names(df_p)=c("x", "Y", paste0("t",time_vals[1:ncol(p)]))# Rename columns
-	df_p %>% melt(id.vars=c("x","Y")) %>% rename(time=variable, p=value) %>% mutate(time=gsub(x=time,pattern="t", replacement=""),time=time),p=p) %>% arrange(time,Y,x) -> df_p
-	
-	# Cross-linked polymer data frame
-	data.frame(x=rep(seq(0,1,Delta_x), Nx),Y=sort(rep(seq(0,1,Delta_x), Nx)),q) -> df_q
-	names(df_q)=c("x", "Y", paste0("t",time_vals[1:ncol(q)]))# Rename columns
-	df_q %>% melt(id.vars=c("x","Y")) %>% rename(time=variable, q=value) %>% mutate(time=gsub(x=time,pattern="t", replacement=""),time=time),q=q) %>% arrange(time,Y,x) -> df_q
-	
-	# 3.1 --- Refractive index matrix
-  Vb = b*b0/rhob # cm**3
-  Vm = m*m0/rhom # cm**3
-  Vp = p*m0/rhop # cm**3
-  Vq = q*m0/rhop # cm**3
-  Vze = ze*grating.z0/rhoz # cm**3
-  Vza = za*grating.z0/rhoz # cm**3
-  Vzs = zs*grating.z0/rhoz # cm**3
-  Va = a*a0/rhoa # cm**3
-  Vs = s*s0/rhos # cm**3
-  Vtotal=Vb+Vm+Vp+Vq+Vze+Vza+Vzs+Va+Vs# cm**3
-  
-  phi.b=Vb/Vtotal
-  phi.m=Vm/Vtotal
-  phi.p=Vp/Vtotal
-  phi.q=Vq/Vtotal
-  phi.ze=Vze/Vtotal
-  phi.zs=Vzs/Vtotal
-  phi.za=Vza/Vtotal
-  phi.a=Va/Vtotal
-  phi.s=Vs/Vtotal
-  
-  Lorentz.Lorenz.RHS = phi.b*(nb*nb - 1)/(nb*nb + 2) + phi.m*(nm*nm - 1)/(nm*nm + 2) + phi.p*(np*np - 1)/(np*np + 2) + phi.q*(nq*nq - 1)/(nq*nq + 2) + phi.ze*(nze*nze - 1)/(nze*nze + 2) + phi.zs*(nzs*nzs - 1)/(nzs*nzs + 2) + phi.za*(nza*nza - 1)/(nza*nza + 2) + phi.a*(na*na - 1)/(na*na + 2) + phi.s*(ns*ns - 1)/(ns*ns + 2)
-  
-  n=sqrt((2*Lorentz.Lorenz.RHS + 1)/(1 - Lorentz.Lorenz.RHS))
-  
-  data.frame(x=rep(seq(0,1,Delta_x), Nx), Y=sort(rep(seq(0,1,Delta_x), Nx)), n) -> df_n
-  names(df_n)=c("x","Y", paste0("t",time_vals[1:ncol(n)]))
-  df_n %>% melt(id.vars=c("x","Y")) %>% rename(time=variable, n_after_exposure=value) %>% mutate(time=gsub(x=time, pattern="t", replacement=""), time=time)) %>% arrange(time,Y,x) -> df_n# Additional columns containing info on input
-  
-  cbind(df_b,m=df_m$m,p=df_p$p, q=df_q$q, ze=df_ze$ze, za=df_za$za, zs=df_zs$zs, a=df_a$a, s=df_s$s, n_after_exposure=df_n$n_after_exposure) -> df1
-	
-  Nt = length(time)
-  N0=matrix(0, nrow=Nt, ncol=Nx)
-  N1a=matrix(0, nrow=Nt, ncol=Nx)
-  N1b=matrix(0, nrow=Nt, ncol=Nx)
-  d2=matrix(0, nrow=Nt, ncol=Nx)
-  int_n2=matrix(0, nrow=Nt, ncol=Nx)
-  Mean_RI=rep(0,Nt)
-  
-  for(k in 1:Nt){
-
-matrix(n[, k], nrow=Nx) -> n1
-  	
-  	n2=n1**2
-  	
-  	Mean_RI[k]=Delta_x*Delta_x/4*(n1[0,0] + n1[Nx-1,0] + n1[0,Nx-1] + n1[Nx-1,Nx-1] + np.sum(2*n1[0,range(1, Nx-1)]) + np.sum(2*n1[range(1, Nx-1),0]) + np.sum(2*n1[Nx-1,range(1, Nx-1)]) + np.sum(2*n1[range(1, Nx-1),Nx-1]) + np.sum(4*n1[range(1, Nx-1),range(1, Nx-1)]) )
-
-for(i in 1:Nx){
-  
-  n1[, i] -> n1i
-  N0[k, i]=Delta_x/3*(n1i[1] + np.sum(2*n1i[times_2]) + np.sum(4*n1i[times_4]) + n1i[Nx])
-  
-  n1[, i]*cos(2*pi*x) -> n1cos
-  N1a[k, i]=2*Delta_x/3*(n1cos[1] + np.sum(2*n1cos[times_2]) + np.sum(4*n1cos[times_4]) + n1cos[Nx])
-  
-  n1[, i]*sin(2*pi*x) -> n1sin
-  N1b[k, i]=2*Delta_x/3*(n1sin[1] + np.sum(2*n1sin[times_2]) + np.sum(4*n1sin[times_4]) + n1sin[Nx])
-  
-}
-
-
-n.Fourier=matrix(0, nrow=Nx, ncol=Nx)
-
-for(i in 1:Nx){
-  
-  n.Fourier[,i] = N0[k, i] + N1a[k, i]*cos(2*pi*x) + N1b[k, i]*sin(2*pi*x)
-  
-}
-
-diff = abs(n1 - n.Fourier)**2
-
-for(i in 1:Nx){
-	d2[k,i] = Delta_x/3*(diff[1, i] + np.sum(2*diff[times_2, i]) + np.sum(4*diff[times_4, i]) + diff[Nx, i])
-	int_n2[k,i] = Delta_x/3*(n2[1, i] + np.sum(2*n2[times_2, i]) + np.sum(4*n2[times_4, i]) + n2[Nx, i])
-}
-
-  }# End for loop
-  
-  delta=d2/int_n2
-  Delta_n=2*sqrt(N1a*N1a + N1b*N1b)
-  
-  data.frame(
-time=rep(time, Nx),
-Y=sort(rep(seq(0,1,Delta_x), Nt)),
-Delta_n=melt(Delta_n)$value,
-delta=melt(delta)$value
-  ) -> df2
-  
-  df1 %>% mutate(
-  	
-  	Delta_n=0, 
-  	delta=0, 
-  	Mean_RI=0
-  	
-  ) %>% arrange(time,Y,x) -> df1
-  
-  for(i in time){
-  	for(j in seq(0,1,Delta_x)){
-  		df1[df1$time==i & df1$Y==j, "Delta_n"] = df2[df2$time==i & df2$Y==j, "Delta_n"]
-  		df1[df1$time==i & df1$Y==j, "delta"] = df2[df2$time==i & df2$Y==j, "delta"]
-  	}
-  }
-  
-  for(i in 1:length(time)){
-  	df1[df1$time==time[i], "Mean_RI"]=Mean_RI[i]
-  }
-  
-  df1 %>% mutate(
-  	theta_B = asin(lambda_probe/2/Mean_RI/Lambda_1) - phi_0,
-  	Delta_theta_B = theta_B1 - theta_B,
-  	Delta_phi_r = 0
-  ) -> df1
-  
-  if df0 %>% subset(Y==0) %>% distinct(Klein.Cook) %>% pull(Klein.Cook) < 10){
-	
-		df1 %>% mutate(nu=pi*Delta_n*T_1/lambda_probe, xi=0, J0=nu/2, J1=J0) -> df1
-	
-		for(l in 1:100){
-			
-			df1$J1 = df1$J1 + ((-1)**l)/factorial(l)/factorial(l+1)*df1$J0**(2*l + 1)
-		
-		}
-			
-		df1 %>% mutate(
-			
-			eta=J1*J1, 
-			Geometry="Planar"
-			
-		) %>% select(-J1,-J0) -> df1
-		
-	} else {
-			
-			df1 %>% mutate(
-				
-				nu=pi*Delta_n*T_1/lambda_probe/cos(theta_B), 
-				xi=pi*T_1*Delta_phi_r/Lambda_1, 
-				eta=sin(sqrt(xi*xi + nu*nu))**2/sqrt(1 + (xi*xi)/(nu*nu)), 
-				Geometry="Volume"
-				
-			) -> df1
-			
-	}
-	
-	df1 %>% subset(time==0) %>% rename(pre_exposure_eta=eta) %>% distinct(Y,pre_exposure_eta) -> df4
-	
-	df1 %>% mutate(pre_exposure_eta=0) -> df1
-	
-	for(i in seq(0,1,Delta_x)){
-		df1[df1$Y==i, "pre_exposure_eta"] = df4[df4$Y==i,"pre_exposure_eta"]
-	}
-	
-	df1 %>% mutate(
-		
-		normalized_eta=eta/pre_exposure_eta,
-		lambda_r_t=2*Mean_RI*Lambda_1*sin(theta_B),
-		nze=nze,
-		nza=nza,
-		nzs=nzs,
-		na=na,
-		ns=ns,
-		z0=z0,
-		a0=a0,
-		s0=s0,
-		b0=b0,
-		tau_c_s=tau_c_s,
-		tau_c_a=tau_c_a,
-		tau_e_s=tau_e_s,
-		tau_e_a=tau_e_a,
-		tau_y_s=T_1*T_1/Ds,
-		tau_y_a=T_1*T_1/Da,
-		tau_x_s=x_hat*x_hat/Ds,
-		tau_x_a=x_hat*x_hat/Da,
-		gamma_a=gamma_a,
-		gamma_s=gamma_s,
-		omega_a=omega_a,
-		omega_s=omega_s,
-		rhoz=rhoz,
-		rhoa=rhoa,
-		rhos=rhos,
-		Ds=Ds,
-		Da=Da,
-		wt_pc=wt_pc,
-		lambda_probe=lambda_probe,
-		T_1=T_1,
-		pre_exposure_Bragg_angle=theta_B1,
-		lpmm=lpmm,
-		exposure_time=exposure_time,
-		output_time_step=output_time_step,
-		model="sensor_2D_model_v2"
-	) %>% arrange(time,Y,x) -> df1
-	
-	return(df1)
-	
-}
+                                                 
+    return spatial_profile_DF, optical_properties_DF, Bragg_Angle_Wavelength_DF
