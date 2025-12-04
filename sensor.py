@@ -16,58 +16,51 @@ import pandas as pd
 from math import pi, factorial
 from numpy.linalg import inv
 from time import time as gettime
-
-def simpsons_rule_1D(array_1D, step):
-    
-    intpts=list(range(1,len(array_1D)-1))
-    times_4=[i for i in intpts if i%2!=0]
-    times_2=[i for i in intpts if i%2==0]
-    
-    return step/3*(array_1D[0] + 4*sum(array_1D[times_4]) + 2*sum(array_1D[times_2]) + array_1D[len(array_1D)-1])
+from simpsons_rule_1D import simpsons_rule_1D
 
 def sensor(
 
-	grating#,
-	n_s=1.33#,
-	n_a=2#,
-	n_zs=1.46#,
-	n_za=1.6#,
-	tau_c_s=60#,# seconds
-	tau_c_a=1#,# seconds
-	tau_e_s=60#,# seconds
-	tau_e_a=60#,# seconds
-	a0=0.1*0.1#,# m0
-	s0=0.1#,# m0
-	rhoa=9#,# g/cm3
-	rhos=1#,# g/cm3
-	Da=2.3e-5#,# cm/2
-	Ds=2.3e-5#,# cm2/s
-	lambda_probe=633e-7#,# cm
-	exposure_time=180#,# seconds
-	output_time_step=5):
+    grating,
+    n_s=1.33,
+    n_a=2,
+    n_zs=1.46,
+    n_za=1.6,
+    tau_c_s=60,# seconds
+    tau_c_a=1,# seconds
+    tau_e_s=60,# seconds
+    tau_e_a=60,# seconds
+    a0=0.1*0.1,# m0
+    s0=0.1,# m0
+    rhoa=9,# g/cm3
+    rhos=1,# g/cm3
+    Da=2.3e-5,# cm/2
+    Ds=2.3e-5,# cm2/s
+    lambda_probe=633e-7,# cm
+    exposure_time=180,# seconds
+    output_time_step=5):
     
     if "spatial_profile_DF" not in dir(grating):
     
         return warn("Sensor needs a theoretically modelled holographic grating")
 
 
-	if grating.slant_angle==0:
+    if grating.slant_angle==0:
         
         grating.slant_angle=1e-4
-	
-	# 1.2 --- Define the holographic grating parameters
-	Delta_x = grating.Delta_x
-	Delta_t = grating.Delta_t
-	r = Delta_t/Delta_x/Delta_x
-	Nx = int(1/Delta_x + 1)# Number of spatial points
-	
-	interior_points = list(range(1,Nx-1))
+    
+    # 1.2 --- Define the holographic grating parameters
+    Delta_x = grating.Delta_x
+    Delta_t = grating.Delta_t
+    r = Delta_t/Delta_x/Delta_x
+    Nx = int(1/Delta_x + 1)# Number of spatial points
+    
+    interior_points = list(range(1,Nx-1))
     times_4 = [interior_points[i] for i in range(len(interior_points)) if interior_points[i]%2 != 0]
     times_2 = [interior_points[i] for i in range(len(interior_points)) if interior_points[i]%2 == 0]
-	
+    
     final_time = max(grating.spatial_profile_DF.time)
-	pre_exposure_spatial_profile_DF = grating.spatial_profile_DF[grating.spatial_profile_DF.time == final_time].reset_index(drop=True)
-	
+    pre_exposure_spatial_profile_DF = grating.spatial_profile_DF[grating.spatial_profile_DF.time == final_time].reset_index(drop=True)
+    
     lpmm = grating.lpmm
     
     b0 = grating.b0
@@ -85,57 +78,57 @@ def sensor(
     
     Mean_RI_0 = final_grating_properties.Mean_RI[0]
     
-	x_hat = Lambda_0/np.cos(phi_0)
-	
-	y_hat = Lambda_0/np.sin(phi_0)
-	
-	lambda_r_0 = 2*Mean_RI_0*Lambda_0*np.sin(phi_0)
+    x_hat = Lambda_0/np.cos(phi_0)
+    
+    y_hat = Lambda_0/np.sin(phi_0)
+    
+    lambda_r_0 = 2*Mean_RI_0*Lambda_0*np.sin(phi_0)
     
     n_ze = grating.n_z
-		
-	t0=1
-	
-	m0=1
-	
-	if grating.z0==0:
+        
+    t0=1
+    
+    m0=1
+    
+    if grating.z0==0:
         grating.z0=1e-6
-	
+    
     if tau_c_s==0:
         tau_c_s=1e-4
-	
+    
     if tau_e_s==0:
         tau_e_s=1e-4
         
-	if tau_c_a==0:
+    if tau_c_a==0:
         tau_c_a=1e-4
         
-	if tau_e_a==0:
+    if tau_e_a==0:
         tau_e_a=1e-4
-	
-	gamma_a=1/grating.z0/tau_c_a
-	gamma_s=1/grating.z0/tau_c_s
-	omega_a=a0/grating.z0/tau_e_a
-	omega_s=s0/grating.z0/tau_e_s
+    
+    gamma_a=1/grating.z0/tau_c_a
+    gamma_s=1/grating.z0/tau_c_s
+    omega_a=a0/grating.z0/tau_e_a
+    omega_s=s0/grating.z0/tau_e_s
     
     tau_y_s=T_0*T_0/Ds
     tau_y_a=T_0*T_0/Da
     tau_x_s=x_hat*x_hat/Ds
     tau_x_a=x_hat*x_hat/Da
     
-	n_before_exposure = np.array(pre_exposure_spatial_profile_DF.refractive_index)
-	n_b = grating.n_b
-	n_m = grating.n_m
-	n_p = grating.n_p
-	n_q = grating.n_q
-	
-	free_surface = list(pre_exposure_spatial_profile_DF[pre_exposure_spatial_profile_DF.Y == 1].index)
-	fixed_surface = list(pre_exposure_spatial_profile_DF[pre_exposure_spatial_profile_DF.Y == 0].index)
-	
-	b1 = np.ones(Nx*Nx)
-	m1 = np.array(pre_exposure_spatial_profile_DF.monomer)
-	p1 = np.array(pre_exposure_spatial_profile_DF.short_polymer)
-	q1 = np.array(pre_exposure_spatial_profile_DF.immobile_polymer)
-	
+    n_before_exposure = np.array(pre_exposure_spatial_profile_DF.refractive_index)
+    n_b = grating.n_b
+    n_m = grating.n_m
+    n_p = grating.n_p
+    n_q = grating.n_q
+    
+    free_surface = list(pre_exposure_spatial_profile_DF[pre_exposure_spatial_profile_DF.Y == 1].index)
+    fixed_surface = list(pre_exposure_spatial_profile_DF[pre_exposure_spatial_profile_DF.Y == 0].index)
+    
+    b1 = np.ones(Nx*Nx)
+    m1 = np.array(pre_exposure_spatial_profile_DF.monomer)
+    p1 = np.array(pre_exposure_spatial_profile_DF.short_polymer)
+    q1 = np.array(pre_exposure_spatial_profile_DF.immobile_polymer)
+    
     if grating.z0 == 0:
         ze1 = np.zeros(Nx*Nx)
     
@@ -144,18 +137,18 @@ def sensor(
     
     s1 = np.zeros(Nx*Nx); s1[free_surface] = 1
     a1 = np.zeros(Nx*Nx); a1[free_surface] = 1
-	zs1 = np.zeros(Nx*Nx)
-	za1 = np.zeros(Nx*Nx)
-	
-	a = a1
-	s = s1
-	b = b1
-	m = m1
-	p = p1
-	q = q1
-	ze = ze1
-	zs = zs1
-	za = za1
+    zs1 = np.zeros(Nx*Nx)
+    za1 = np.zeros(Nx*Nx)
+    
+    a = a1
+    s = s1
+    b = b1
+    m = m1
+    p = p1
+    q = q1
+    ze = ze1
+    zs = zs1
+    za = za1
     
     spatial_profile_DF = pre_exposure_spatial_profile_DF.rename(columns={'nanoparticles':'nanoparticles_vacant'})
     spatial_profile_DF.time = 0
@@ -200,16 +193,16 @@ def sensor(
     
     x1 = np.array(pre_exposure_spatial_profile_DF.x)
     Y1 = np.array(pre_exposure_spatial_profile_DF.Y)
-		
-	matrix_m = m1.reshape(Nx,Nx).T
-	matrix_p = p1.reshape(Nx,Nx).T
-	matrix_q = q1.reshape(Nx,Nx).T
-	
-	int_m_dx_dy=Delta_x*Delta_x/4*(matrix_m[0,0] + matrix_m[Nx-1,0] + matrix_m[0,Nx-1] + matrix_m[Nx-1,Nx-1] + np.sum(2*matrix_m[0,range(1, Nx-1)]) + np.sum(2*matrix_m[range(1, Nx-1),0]) + np.sum(2*matrix_m[Nx-1,range(1, Nx-1)]) + np.sum(2*matrix_m[range(1, Nx-1),Nx-1]) + np.sum(4*matrix_m[range(1, Nx-1),range(1, Nx-1)]) )
-	
-	int_p_dx_dy=Delta_x*Delta_x/4*(matrix_p[0,0] + matrix_p[Nx-1,0] + matrix_p[0,Nx-1] + matrix_p[Nx-1,Nx-1] + np.sum(2*matrix_p[0,range(1, Nx-1)]) + np.sum(2*matrix_p[range(1, Nx-1),0]) + np.sum(2*matrix_p[Nx-1,range(1, Nx-1)]) + np.sum(2*matrix_p[range(1, Nx-1),Nx-1]) + np.sum(4*matrix_p[range(1, Nx-1),range(1, Nx-1)]) )
-	
-	int_q_dx_dy=Delta_x*Delta_x/4*(matrix_q[0,0] + matrix_q[Nx-1,0] + matrix_q[0,Nx-1] + matrix_q[Nx-1,Nx-1] + np.sum(2*matrix_q[0,range(1, Nx-1)]) + np.sum(2*matrix_q[range(1, Nx-1),0]) + np.sum(2*matrix_q[Nx-1,range(1, Nx-1)]) + np.sum(2*matrix_q[range(1, Nx-1),Nx-1]) + np.sum(4*matrix_q[range(1, Nx-1),range(1, Nx-1)]) )
+        
+    matrix_m = m1.reshape(Nx,Nx).T
+    matrix_p = p1.reshape(Nx,Nx).T
+    matrix_q = q1.reshape(Nx,Nx).T
+    
+    int_m_dx_dy=Delta_x*Delta_x/4*(matrix_m[0,0] + matrix_m[Nx-1,0] + matrix_m[0,Nx-1] + matrix_m[Nx-1,Nx-1] + np.sum(2*matrix_m[0,range(1, Nx-1)]) + np.sum(2*matrix_m[range(1, Nx-1),0]) + np.sum(2*matrix_m[Nx-1,range(1, Nx-1)]) + np.sum(2*matrix_m[range(1, Nx-1),Nx-1]) + np.sum(4*matrix_m[range(1, Nx-1),range(1, Nx-1)]) )
+    
+    int_p_dx_dy=Delta_x*Delta_x/4*(matrix_p[0,0] + matrix_p[Nx-1,0] + matrix_p[0,Nx-1] + matrix_p[Nx-1,Nx-1] + np.sum(2*matrix_p[0,range(1, Nx-1)]) + np.sum(2*matrix_p[range(1, Nx-1),0]) + np.sum(2*matrix_p[Nx-1,range(1, Nx-1)]) + np.sum(2*matrix_p[range(1, Nx-1),Nx-1]) + np.sum(4*matrix_p[range(1, Nx-1),range(1, Nx-1)]) )
+    
+    int_q_dx_dy=Delta_x*Delta_x/4*(matrix_q[0,0] + matrix_q[Nx-1,0] + matrix_q[0,Nx-1] + matrix_q[Nx-1,Nx-1] + np.sum(2*matrix_q[0,range(1, Nx-1)]) + np.sum(2*matrix_q[range(1, Nx-1),0]) + np.sum(2*matrix_q[Nx-1,range(1, Nx-1)]) + np.sum(2*matrix_q[range(1, Nx-1),Nx-1]) + np.sum(4*matrix_q[range(1, Nx-1),range(1, Nx-1)]) )
     
     def calculate_volume(solvent, analyte):
         
@@ -283,7 +276,7 @@ def sensor(
             xi=0
             J0=nu/2
             J1=J0
-      	
+          
             for l in range(1,101):
                 
                 J1 = J1 + ((-1)**l)/factorial(l)/factorial(l+1)*J0**(2*l + 1)
@@ -300,7 +293,7 @@ def sensor(
         
     pre_exposure_Mean_RI, pre_exposure_Delta_n, pre_exposure_theta_B, pre_exposure_nu, pre_exposure_lambda_r, pre_exposure_eta = calculate_optical_properties(n1)
     
-	optical_properties_DF = pd.DataFrame({
+    optical_properties_DF = pd.DataFrame({
         'time':np.zeros(Nx),
         'Y': np.linspace(0, 1, Nx),
         'Delta_n': pre_exposure_Delta_n,
@@ -312,46 +305,46 @@ def sensor(
         'theta_B': pre_exposure_theta_B,
         'Mean_RI': pre_exposure_Mean_RI,
         'lambda_r': pre_exposure_lambda_r})
-	
+    
     # 3.1 --- Diffusion of target a
-	alpha_s_x=Ds*t0/x_hat/x_hat
-	alpha_a_x=Da*t0/x_hat/x_hat
-	alpha_s_y=Ds*t0/T_0/T_0
-	alpha_a_y=Da*t0/T_0/T_0
-	gamma_ss=gamma_s*grating.z0*t0
+    alpha_s_x=Ds*t0/x_hat/x_hat
+    alpha_a_x=Da*t0/x_hat/x_hat
+    alpha_s_y=Ds*t0/T_0/T_0
+    alpha_a_y=Da*t0/T_0/T_0
+    gamma_ss=gamma_s*grating.z0*t0
     
     if s0==0:
         omega_ss = 0
         
     else:
         omega_ss = omega_s*grating.z0*t0/s0
-	
+    
     gamma_sz=gamma_s*s0*t0
-	omega_sz=omega_s*t0
-	gamma_aa=gamma_a*grating.z0*t0
+    omega_sz=omega_s*t0
+    gamma_aa=gamma_a*grating.z0*t0
 
     if a0==0:
         omega_aa = 0
 
     else:
         omega_aa = omega_a*grating.z0*t0/a0
-	
+    
     gamma_az=gamma_a*a0*t0
-	omega_az=omega_a*t0
-	
-    n_iterations = exposure_time/Delta_t + 1# Total number of iterations
+    omega_az=omega_a*t0
+    
+    n_iterations = int(exposure_time/Delta_t + 1)# Total number of iterations
     
     time_vals = list(range(0, exposure_time+1, output_time_step))
-	
+    
     if exposure_time < output_time_step:
         bind_iter = 0
          
     else:
         bind_iter = [i/Delta_t for i in time_vals]
         bind_iter = bind_iter[1::]
-	
-	# Simulation of holographic grating exposed to a loaded solvent
-	for j in range(0, n_iterations):
+    
+    # Simulation of holographic grating exposed to a loaded solvent
+    for j in range(0, n_iterations):
         
         AA2 = (2 + 2*r*alpha_a_x + 2*r*alpha_a_y + gamma_aa*Delta_t*ze1)*np.identity(Nx*Nx)
         AA1 = (2 - 2*r*alpha_a_x - 2*r*alpha_a_y - gamma_aa*Delta_t*ze1)*np.identity(Nx*Nx)
@@ -369,16 +362,16 @@ def sensor(
         ZSZS1 = (2 - omega_sz*Delta_t)*np.identity(Nx*Nx)
         
         BB2 = 2*np.identity(Nx*Nx)
-  		BB1 = 2*np.identity(Nx*Nx)
-  		
-  		MM2 = 2*np.identity(Nx*Nx)
-  		MM1 = 2*np.identity(Nx*Nx)
-  		
-  		PP2 = 2*np.identity(Nx*Nx)
-  		PP1 = 2*np.identity(Nx*Nx)
-  		
-  		QQ2 = 2*np.identity(Nx*Nx)
-  		QQ1 = 2*np.identity(Nx*Nx)
+        BB1 = 2*np.identity(Nx*Nx)
+          
+        MM2 = 2*np.identity(Nx*Nx)
+        MM1 = 2*np.identity(Nx*Nx)
+          
+        PP2 = 2*np.identity(Nx*Nx)
+        PP1 = 2*np.identity(Nx*Nx)
+          
+        QQ2 = 2*np.identity(Nx*Nx)
+        QQ1 = 2*np.identity(Nx*Nx)
         
         for i in range(0, Nx*Nx):
             
@@ -401,31 +394,31 @@ def sensor(
                 j_plus_1 = i - Nx
             else:
                 j_plus_1 = i + Nx
-	    
-            AA2[i, i_minus_1] = AA2[i, i_minus_1] - r*alpha_a_x
-			AA2[i, j_minus_1] = AA2[i, j_minus_1] - r*alpha_a_y
-			AA2[i, i_plus_1] = AA2[i, i_plus_1] - r*alpha_a_x
-			AA2[i, j_plus_1] = AA2[i, j_plus_1] - r*alpha_a_y
-
-			SS2[i, i_minus_1] = SS2[i, i_minus_1] - r*alpha_s_x
-			SS2[i, j_minus_1] = SS2[i, j_minus_1] - r*alpha_s_y
-			SS2[i, i_plus_1] = SS2[i, i_plus_1] - r*alpha_s_x
-			SS2[i, j_plus_1] = SS2[i, j_plus_1] - r*alpha_s_y
-			
-			AA1[i, i_minus_1] = AA1[i, i_minus_1] + r*alpha_a_x
-			AA1[i, j_minus_1] = AA1[i, j_minus_1] + r*alpha_a_y
-			AA1[i, i_plus_1] = AA1[i, i_plus_1] + r*alpha_a_x
-			AA1[i, j_plus_1] = AA1[i, j_plus_1] + r*alpha_a_y
-
-			SS1[i, i_minus_1] = SS1[i, i_minus_1] + r*alpha_s_x
-			SS1[i, j_minus_1] = SS1[i, j_minus_1] + r*alpha_s_y
-			SS1[i, i_plus_1] = SS1[i, i_plus_1] + r*alpha_s_x
-			SS1[i, j_plus_1] = SS1[i, j_plus_1] + r*alpha_s_y
-				    	
-		
-        a2 = np.matmul(inv(AA2), np.matmul(AA1, a1) + 2*Delta_t*omega_aa*za1)
         
-        s2 = np.matmul(inv(SS2), np.matmul(SS1, s1) + 2*Delta_t*omega_ss*zs1)
+            AA2[i, i_minus_1] = AA2[i, i_minus_1] - r*alpha_a_x
+            AA2[i, j_minus_1] = AA2[i, j_minus_1] - r*alpha_a_y
+            AA2[i, i_plus_1] = AA2[i, i_plus_1] - r*alpha_a_x
+            AA2[i, j_plus_1] = AA2[i, j_plus_1] - r*alpha_a_y
+
+            SS2[i, i_minus_1] = SS2[i, i_minus_1] - r*alpha_s_x
+            SS2[i, j_minus_1] = SS2[i, j_minus_1] - r*alpha_s_y
+            SS2[i, i_plus_1] = SS2[i, i_plus_1] - r*alpha_s_x
+            SS2[i, j_plus_1] = SS2[i, j_plus_1] - r*alpha_s_y
+            
+            AA1[i, i_minus_1] = AA1[i, i_minus_1] + r*alpha_a_x
+            AA1[i, j_minus_1] = AA1[i, j_minus_1] + r*alpha_a_y
+            AA1[i, i_plus_1] = AA1[i, i_plus_1] + r*alpha_a_x
+            AA1[i, j_plus_1] = AA1[i, j_plus_1] + r*alpha_a_y
+
+            SS1[i, i_minus_1] = SS1[i, i_minus_1] + r*alpha_s_x
+            SS1[i, j_minus_1] = SS1[i, j_minus_1] + r*alpha_s_y
+            SS1[i, i_plus_1] = SS1[i, i_plus_1] + r*alpha_s_x
+            SS1[i, j_plus_1] = SS1[i, j_plus_1] + r*alpha_s_y
+                        
+        
+        a2 = np.matmul(inv(AA2), np.matmul(AA1, a1) + 2*Delta_t*omega_aa*za1); a2[free_surface]=1
+        
+        s2 = np.matmul(inv(SS2), np.matmul(SS1, s1) + 2*Delta_t*omega_ss*zs1); s2[free_surface]=1
         
         ze2 = np.matmul(inv(ZEZE2), np.matmul(ZEZE1, ze1) + 2*omega_az*Delta_t*za1 + 2*omega_sz*Delta_t*zs1)
         
@@ -440,52 +433,54 @@ def sensor(
         p2 = np.matmul(inv(PP2), np.matmul(PP1, p1))
         
         q2 = np.matmul(inv(QQ2), np.matmul(QQ1, q1))
-        	  
-	  a2[free_surface]=1
-	  s2[free_surface]=1
-	  
-	  a1 = a2
-	  s1 = s2
-	  ze1 = ze2
-	  za1 = za2
-	  zs1 = zs2
-	  b1 = b2
-	  m1 = m2
-	  p1 = p2
-	  q1 = q2
+        
+        a1 = a2
+        s1 = s2
+        ze1 = ze2
+        za1 = za2
+        zs1 = zs2
+        b1 = b2
+        m1 = m2
+        p1 = p2
+        q1 = q2
+        
+        n1 = calculate_RI(s1, a1, ze1, zs1, za1)
+        
+        new_Mean_RI, new_Delta_n, new_theta_B, new_nu, new_lambda_r, new_eta = calculate_optical_properties(n1)
       
-      n1 = calculate_RI(s1, a1, ze1, zs1, za1)
-      
-      new_Mean_RI, new_Delta_n, new_theta_B, new_nu, new_lambda_r, new_eta = calculate_optical_properties(n1)
-      
-      if j*Delta_t in time_vals:
-          
-          spatial_profile_DF = pd.concat([spatial_profile_DF, 
-                             pd.DataFrame({
-                                 'x':x, 'Y': Y, 
-                                 'time': np.zeros(Nx) + j*Delta_t,
-                                 'binder': b1,
-                                 'monomer': m1,
-                                 'short_polymer': p1,
-                                 'immobile_polymer': q1,
-                                 'refractive_index': n1,
-                                 'nanoparticles_vacant': ze1,
-                                 'nanoparticles_solvent': zs1,
-                                 'nanoparticles_analyte': za1})])
-          
-          optical_properties_DF = pd.concat([optical_properties_DF,
-                                             pd.DataFrame({
-                                                 'time':np.zeros(Nx) + j*Delta_t,
-                                                 'Y': np.linspace(0, 1, Nx),
-                                                 'Delta_n': new_Delta_n,
-                                                 'nu': new_nu,
-                                                 'eta': new_eta})])
-          
-          Bragg_Angle_Wavelength_DF = pd.concat([Bragg_Angle_Wavelength_DF,
-                                                 pd.DataFrame({
-                                                     'time': [j*Delta_t],
-                                                     'theta_B': new_theta_B,
-                                                     'Mean_RI': new_Mean_RI,
-                                                     'lambda_r': new_lambda_r})
+        if j*Delta_t in time_vals:
+            
+            spatial_profile_DF = pd.concat([spatial_profile_DF,
+                                            pd.DataFrame({
+                                                'x':x1, 
+                                                'Y': Y1, 
+                                                'time': np.zeros(Nx*Nx) + j*Delta_t,
+                                                'binder': b1,
+                                                'monomer': m1,
+                                                'short_polymer': p1,
+                                                'immobile_polymer': q1,
+                                                'refractive_index': n1,
+                                                'analyte': a1,
+                                                'solvent': s1,
+                                                'nanoparticles_vacant': ze1,
+                                                'nanoparticles_solvent': zs1,
+                                                'nanoparticles_analyte': za1})]).reset_index(drop=True)
+            
+            optical_properties_DF = pd.concat([optical_properties_DF,
+                                               pd.DataFrame({
+                                                   'time':np.zeros(Nx) + j*Delta_t,
+                                                   'Y': np.linspace(0, 1, Nx),
+                                                   'Delta_n': new_Delta_n,
+                                                   'nu': new_nu,
+                                                   'eta': new_eta})]).reset_index(drop=True)
+            
+            Bragg_Angle_Wavelength_DF = pd.concat([Bragg_Angle_Wavelength_DF,
+                                                   pd.DataFrame({
+                                                       'time': [j*Delta_t],
+                                                       'theta_B': new_theta_B,
+                                                       'Mean_RI': new_Mean_RI,
+                                                       'lambda_r': new_lambda_r})]).reset_index(drop=True)
                                                  
+    
+    
     return spatial_profile_DF, optical_properties_DF, Bragg_Angle_Wavelength_DF
