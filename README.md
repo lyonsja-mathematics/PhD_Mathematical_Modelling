@@ -23,24 +23,42 @@ in order to control the final grating in a hybrid polymer system and hence optim
 3. Photopolymerization-induced shrinkage is significantly reduced by the addition of zeolite nanoparticles.
 4. Increased shrinkage at high spatial frequencies.
 
-$$\frac{\partial b}{\partial t} = 0,$$
-$$\frac{\partial m}{\partial t} + \nabla \cdot \vec{J_m} =  - \Phi(t) F(x,y,t) m,$$
-$$\frac{\partial p}{\partial t} + \nabla \cdot \vec{J_p} = \Phi(t) F(x,y,t) m - \Phi(t) \Gamma p^2,$$
-$$\frac{\partial q}{\partial t} = \Phi(t) \Gamma p^2,$$
-$$\frac{\partial z}{\partial t} + \nabla \cdot \vec{J_z} =0.$$
-
-$$F(x,y,t) = k_p \left[ I_0 e^{-\zeta (T-y) } \right]^a \left( 1 +  e^{- \xi z} \cos \left[ \frac{2 \pi \cos \phi_r(t)}{\Lambda(t)} x - \frac{2 \pi \sin \phi_r(t)}{\Lambda(t)} y \right] \right),$$
-
-$$\vec{J_m} =  -D_m \frac{\partial m}{\partial x}\vec{i} - D_m \frac{\partial m}{\partial y}\vec{j},$$
+The hybrid photopolymer system consists of a binder matrix ($b$) such as polyvynyl alcohol (PVA), a monomer ($m$) such as acrylamide (AA), an electron donor, a dye, a crosslinking monomer and inorganic nanoparticles ($z$) such as zeolites. The two-way diffusion model treats the monomer, dye, electron donor and crosslinker as a single constituent. The rates of change of each constituent in the photopolymer system is modelled by the following coupled system of partial differential equations,
 
 ```math
-\vec{J_p} =  -D_p \left\{ \left[ \frac{\partial p}{\partial x}\vec{i} + \frac{\partial p}{\partial y}\vec{j} \right] + \epsilon_{z} \left[ \frac{\partial (pz)}{\partial x}\vec{i} + \frac{\partial (pz)}{\partial y}\vec{j} \right] \right\},
+\begin{align}
+\frac{\partial b}{\partial t} &= 0,\\
+\frac{\partial m}{\partial t} &+ \nabla \cdot \vec{J_m} =  - \Phi(t) F(x,y,t) m,\\
+\frac{\partial p}{\partial t} &+ \nabla \cdot \vec{J_p} = \Phi(t) F(x,y,t) m - \Phi(t) \Gamma p^2,\\
+\frac{\partial q}{\partial t} &= \Phi(t) \Gamma p^2,\\
+\frac{\partial z}{\partial t} &+ \nabla \cdot \vec{J_z} =0,
+\end{align}
 ```
 
+whereby $F$ describes the non-uniform photochemical reaction, $\Phi(t)=1$ for all $t$ when illumination is switched on and 0 otherwise, $\Gamma$ is the rate of crosslinking 
+
 ```math
-\vec{J_z} =  -D_z \left\{ \left[ \frac{\partial z}{\partial x}\vec{i} + \frac{\partial z}{\partial y}\vec{j} \right] + \epsilon_{z} \left[ \frac{\partial (pz)}{\partial x}\vec{i} + \frac{\partial (pz)}{\partial y}\vec{j} \right] + \epsilon_{z} \left[ \frac{\partial (qz)}{\partial x}\vec{i} + \frac{\partial (qz)}{\partial y}\vec{j} \right] \right\}.
+\begin{equation}
+F(x,y,t) = k_p \left[ I_0 e^{-\zeta (T-y) } \right]^a \left\{ 1 +  e^{- \xi z} \cos \left[ \frac{2 \pi \cos \phi_r(t)}{\Lambda(t)} x - \frac{2 \pi \sin \phi_r(t)}{\Lambda(t)} y \right] \right\}.
+\end{equation}
+```
+
+Here $k_p$ and $a$ are constants related to the rate of polymerization, $\zeta$ is the rate of absorption within the photosensitive layer, $xi$ is the scattering constant, $\Lambda$ and $T$ are the grating period and thickness respectively. The slant angle $\phi_r$ illustrated below from the assumptions of the fringe-plane rotation model.
+
+![The geometry for a slanted holographic diffraction grating.](https://github.com/lyonsja-mathematics/PhD_Mathematical_Modelling/blob/main/fringe_plane_rotation_v3.png)
+
+The diffusion flux vectors are
+
+```math
+\begin{align}
+\vec{J_m} &=  -D_m \frac{\partial m}{\partial x}\vec{i} - D_m \frac{\partial m}{\partial y}\vec{j},\\
+\vec{J_p} &=  -D_p \left\{ \left[ \frac{\partial p}{\partial x}\vec{i} + \frac{\partial p}{\partial y}\vec{j} \right] + \epsilon_{z} \left[ \frac{\partial (pz)}{\partial x}\vec{i} + \frac{\partial (pz)}{\partial y}\vec{j} \right] \right\},\\
+\vec{J_z} &=  -D_z \left\{ \left[ \frac{\partial z}{\partial x}\vec{i} + \frac{\partial z}{\partial y}\vec{j} \right] + \epsilon_{z} \left[ \frac{\partial (pz)}{\partial x}\vec{i} + \frac{\partial (pz)}{\partial y}\vec{j} \right] + \epsilon_{z} \left[ \frac{\partial (qz)}{\partial x}\vec{i} + \frac{\partial (qz)}{\partial y}\vec{j} \right] \right\}.
+\end{align}
 ```
 The variable domain is
 ```math
-0 \leq x \leq \frac{\Lambda(t)}{\cos \phi_r(t)}, \qquad 0 \leq y \leq T(t), \qquad t \geq 0.
+\begin{align}
+    0 &\leq x \leq \frac{\Lambda(t)}{ \cos \phi_r(t)}, & 0 &\leq y \leq T(t), & t &\geq 0.
+\end{align}
 ```
