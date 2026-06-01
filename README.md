@@ -283,3 +283,4 @@ An important assumptions of the fringe-plane rotation model is that all loss of 
 
 Numerical simulation of these equations can be executed via the Python script [holographic_grating.py](https://github.com/lyonsja-mathematics/PhD_Mathematical_Modelling/blob/main/holographic_grating.py)
 
+![The predicted actual and apparent shrinkage for slant angles up to 10 degrees and spatial frequencies ranging from 250 - 2000 lines/mm](https://github.com/lyonsja-mathematics/PhD_Mathematical_Modelling/blob/main/shrinkage_angle_lpmm.png)
