@@ -27,6 +27,8 @@ in order to control the final grating in a hybrid polymer system and hence optim
 
 # Mathematical Model
 
+![Optical setup and geometry for a slanted holographic diffraction grating](https://github.com/lyonsja-mathematics/PhD_Mathematical_Modelling/blob/main/holographic_grating_geometry_setup.png)
+
 The hybrid photopolymer system consists of a binder matrix ($b$) such as polyvynyl alcohol (PVA), a monomer ($m$) such as acrylamide (AA), an electron donor, a dye, a crosslinking monomer and inorganic nanoparticles ($z$) such as zeolites. The two-way diffusion model treats the monomer, dye, electron donor and crosslinker as a single constituent. The rates of change of each constituent in the photopolymer system is modelled by the following coupled system of partial differential equations,
 
 ```math
