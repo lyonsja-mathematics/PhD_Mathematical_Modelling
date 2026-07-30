@@ -49,7 +49,7 @@ F(x,y,t) = k_p \left[ I_0 e^{-\zeta (T-y) } \right]^a \left\{ 1 +  e^{- \xi z} \
 \end{equation}
 ```
 
-Here $k_p$ and $a$ are constants related to the rate of polymerization, $\zeta$ is the rate of absorption within the photosensitive layer, $xi$ is the scattering constant, $\Lambda$ and $T$ are the grating period and thickness respectively. The slant angle $\phi_r$ illustrated below from the assumptions of the fringe-plane rotation model.
+Here $k_p$ and $a$ are constants related to the rate of polymerization, $\zeta$ is the rate of absorption within the photosensitive layer, $\xi$ is the scattering constant, $\Lambda$ and $T$ are the grating period and thickness respectively. The slant angle $\phi_r$ illustrated below from the assumptions of the fringe-plane rotation model.
 
 ![The geometry for a slanted holographic diffraction grating.](https://github.com/lyonsja-mathematics/PhD_Mathematical_Modelling/blob/main/fringe_plane_rotation_v3.png)
 
