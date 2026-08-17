@@ -19,7 +19,7 @@ The successful completion of this research was characterized by the ability to a
 
 in order to control the final grating in a hybrid polymer system and hence optimize the functionality of a holographic sensor? 
 		
-- Can the theoretical model predict IEO experimental results:
+- Can the theoretical model predict experimental results collected from the Centre for Industrial & Engineering Optics:
 1. Significantly increased dynamic range over conventional photopolymer media.
 2. Non-linear response of refractive index modulation to increased doping.
 3. Photopolymerization-induced shrinkage is significantly reduced by the addition of zeolite nanoparticles.
@@ -49,7 +49,7 @@ F(x,y,t) = k_p \left[ I_0 e^{-\zeta (T-y) } \right]^a \left\{ 1 +  e^{- \xi z} \
 \end{equation}
 ```
 
-Here $k_p$ and $a$ are constants related to the rate of polymerization, $\zeta$ is the rate of absorption within the photosensitive layer, $\xi$ is the scattering constant, $\Lambda$ and $T$ are the grating period and thickness respectively. The slant angle $\phi_r$ illustrated below from the assumptions of the fringe-plane rotation model.
+Here $k_p$ and $a$ are constants related to the rate of polymerization, $I_0$ is the intensity of the recording beam, $\zeta$ is the rate of absorption within the photosensitive layer, $\xi$ is the scattering constant, $\Lambda$ and $T$ are the grating period and thickness respectively. The slant angle $\phi_r$ illustrated below from the assumptions of the fringe-plane rotation model.
 
 ![The geometry for a slanted holographic diffraction grating.](https://github.com/lyonsja-mathematics/PhD_Mathematical_Modelling/blob/main/fringe_plane_rotation_v3.png)
 
