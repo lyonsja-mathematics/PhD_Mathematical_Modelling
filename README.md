@@ -27,7 +27,7 @@ in order to control the final grating in a hybrid polymer system and hence optim
 
 # Mathematical Model
 
-![Optical setup and geometry for a slanted holographic diffraction grating](https://github.com/lyonsja-mathematics/PhD_Mathematical_Modelling/blob/main/holographic_grating_geometry_setup.png)
+![Optical setup and geometry for a slanted holographic diffraction grating](https://github.com/lyonsja-mathematics/PhD_Mathematical_Modelling/blob/main/figures/holographic_grating_geometry_setup.png)
 
 The hybrid photopolymer system consists of a binder matrix ($b$) such as polyvynyl alcohol (PVA), a monomer ($m$) such as acrylamide (AA), an electron donor, a dye, a crosslinking monomer and inorganic nanoparticles ($z$) such as zeolites. The two-way diffusion model treats the monomer, dye, electron donor and crosslinker as a single constituent. The rates of change of each constituent in the photopolymer system is modelled by the following coupled system of partial differential equations,
 
@@ -279,8 +279,8 @@ An important assumptions of the fringe-plane rotation model is that all loss of 
 
 # Results
 
-Numerical simulation of these equations can be executed via the Python script [holographic_grating.py](https://github.com/lyonsja-mathematics/PhD_Mathematical_Modelling/blob/main/holographic_grating.py)
+Numerical simulation of these equations can be executed via the Python script [holographic_grating.py](https://github.com/lyonsja-mathematics/PhD_Mathematical_Modelling/blob/main/python/holographic_grating.py)
 
-![Observed and predicted time evolution of RI modulation of an unslanted holographic grating recorded in AA/PVA photopolymer with increased doping of BEA nanozeolites.](https://github.com/lyonsja-mathematics/PhD_Mathematical_Modelling/blob/main/actual_and_predicted_cody.png)
+![Observed and predicted time evolution of RI modulation of an unslanted holographic grating recorded in AA/PVA photopolymer with increased doping of BEA nanozeolites.](https://github.com/lyonsja-mathematics/PhD_Mathematical_Modelling/blob/main/figures/actual_and_predicted_cody.png)
 
-![The predicted actual and apparent shrinkage for slant angles up to 10 degrees and spatial frequencies ranging from 250 - 2000 lines/mm](https://github.com/lyonsja-mathematics/PhD_Mathematical_Modelling/blob/main/shrinkage_angle_lpmm.png)
+![The predicted actual and apparent shrinkage for slant angles up to 10 degrees and spatial frequencies ranging from 250 - 2000 lines/mm](https://github.com/lyonsja-mathematics/PhD_Mathematical_Modelling/blob/main/figures/shrinkage_angle_lpmm.png)
