@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # coding: utf-8
-
 from warnings import filterwarnings
 filterwarnings("ignore")
 import numpy as np
@@ -92,31 +91,31 @@ class HolographicGrating:
         
         lw = 107
         hl = "-"*lw + "\n"
-        table_header = "|" + "Holographic Grating".center(lw-2) + "|" + "\n"
+        table_header = "| Holographic Grating".ljust(lw-1) + "|" + "\n"
         
-        table_subheader_1 = "|" + "Properties of the Host Photopolymer".center(lw-2) + "|" + "\n"
+        table_subheader_1 = "| Properties of the Host Photopolymer".ljust(lw-1) + "|" + "\n"
         host_properties = ['Diffusion Coefficient (Monomer)','Refractive Index (Monomer)', 
                            "Refractive Index (Polymer)",'Diffusion Coefficient (Polymer)', "Immobilization Constant",'Thickness','Absorption',
                           'Density (Monomer)', 'Density (Polymer)','Binder to Monomer Ratio','Refractive Index (Binder)','Density (Binder)']
         host_values = [self.__Dm, self.__n_m, self.__n_q, self.__Dp,self.__Gamma, self.__T0, self.__xi,self.__rhom,self.__rhop,self.__b0,self.__n_b,self.__rhob]
         table_body_photopolymer = ""
         for i, j in zip(host_properties, host_values):
-            table_body_photopolymer += "| " + i.center(80) + " | " + str(j).center(20) + " |" + "\n"
+            table_body_photopolymer += "| " + i.ljust(80) + " | " + str(j).ljust(20) + " |" + "\n"
         
-        table_subheader_2 = "|" + "Recording Conditions".center(lw-2) + "|" + "\n"
+        table_subheader_2 = "| Recording Conditions".ljust(lw-1) + "|" + "\n"
         recording_conditions = ['Recording Duration','Spatial Frequency','Recording Intensity','Slant Angle','Wavelength of the Reconstruction Beam']
         recording_values = [self.__total_time,self.__lpmm,self.__I0,self.__slant_angle,self.__lambda_probe]
         table_body_recording = ""
         for i, j in zip(recording_conditions, recording_values):
-            table_body_recording += "| " + i.center(80) + " | " + str(j).center(20) + " |" + "\n"
+            table_body_recording += "| " + i.ljust(80) + " | " + str(j).ljust(20) + " |" + "\n"
             
-        table_subheader_3 = "|" + "Nanoparticle Properties".center(lw-2) + "|" + "\n"
+        table_subheader_3 = "| Nanoparticle Properties".ljust(lw-1) + "|" + "\n"
         nanoparticle_properties = ['Refractive Index (Nanoparticles)', 'Density (Nanoparticles)','Diffusion Coefficient (Nanoparticles)',
                                    'Oligomer-Nanoparticle Cross-Diffusion Constant','Polymer-Nanoparticle Cross-Diffusion Constant']
         nanoparticle_values = [self.__n_z,self.__rhoz,self.__Dz,self.__epsilon_pz,self.__epsilon_qz]
         table_body_nanoparticle = ""
         for i, j in zip(nanoparticle_properties, nanoparticle_values):
-            table_body_nanoparticle += "| " + i.center(80) + " | " + str(j).center(20) + " |" + "\n"
+            table_body_nanoparticle += "| " + i.ljust(80) + " | " + str(j).ljust(20) + " |" + "\n"
             
         return hl + table_header + hl + table_subheader_1 + hl+ table_body_photopolymer + hl +table_subheader_2 + hl +table_body_recording + hl + table_subheader_3 + hl + table_body_nanoparticle + hl
         
@@ -471,17 +470,20 @@ class HolographicGrating:
         optical_properties_DF['eta']=eta
 
         end_computation = gettime()
+        self.__computation_time = end_computation-start_computation
         
-        print("Simulation Complete")
-
-        self.computation_time = end_computation-start_computation
-
+        lw=107
+        print("-"*lw)
+        print(" Numerical Simulation Complete ".center(lw, '-'))
+        print("-"*lw)
+        print("| Computation Time: {:.1f} s".format(self.__computation_time).ljust(lw-1)+'|')        
+        print(HolographicGrating.__str__(self))
+        
         self.spatial_profile_DF = spatial_profile_DF
 
         self.optical_properties_DF = optical_properties_DF
 
         self.shrinkage_DF = shrinkage_DF
-
 
 if __name__ == "__main__":
     a = HolographicGrating(total_time=0)
