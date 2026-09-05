@@ -89,33 +89,35 @@ class HolographicGrating:
         
     def __str__(self):
         
-        lw = 107
-        hl = "-"*lw + "\n"
-        table_header = "| Holographic Grating".ljust(lw-1) + "|" + "\n"
+        table_width = 107
+        left_column_width = int((table_width-7)*.8)
+        right_column_width = int((table_width-7)*.2)
+        hl = "-"*table_width + "\n"
+        table_header = "| Holographic Grating".ljust(table_width-1) + "|" + "\n"
         
-        table_subheader_1 = "| Properties of the Host Photopolymer".ljust(lw-1) + "|" + "\n"
-        host_properties = ['Diffusion Coefficient (Monomer)','Refractive Index (Monomer)', 
-                           "Refractive Index (Polymer)",'Diffusion Coefficient (Polymer)', "Immobilization Constant",'Thickness','Absorption',
-                          'Density (Monomer)', 'Density (Polymer)','Binder to Monomer Ratio','Refractive Index (Binder)','Density (Binder)']
-        host_values = [self.__Dm, self.__n_m, self.__n_q, self.__Dp,self.__Gamma, self.__T0, self.__xi,self.__rhom,self.__rhop,self.__b0,self.__n_b,self.__rhob]
+        table_subheader_1 = "| Properties of the Host Photopolymer".ljust(table_width-1) + "|" + "\n"
+        host_properties = ['Diffusion Coefficient (Monomer) [cm2/s]','Refractive Index (Monomer)', 
+                           "Refractive Index (Polymer)",'Diffusion Coefficient (Polymer) [cm2/s]', "Immobilization Constant [/s]",'Thickness [cm]','Absorption [/cm]',
+                          'Density (Monomer) [g/cm3]', 'Density (Polymer) [g/cm3]','Binder to Monomer Ratio','Refractive Index (Binder)','Density (Binder) [g/cm3]']
+        host_values = [self.__Dm, self.__n_m, self.__n_q, self.__Dp,self.__Gamma, self.__T0, self.__zeta,self.__rhom,self.__rhop,self.__b0,self.__n_b,self.__rhob]
         table_body_photopolymer = ""
         for i, j in zip(host_properties, host_values):
-            table_body_photopolymer += "| " + i.ljust(80) + " | " + str(j).ljust(20) + " |" + "\n"
+            table_body_photopolymer += "| " + i.ljust(left_column_width) + " | " + str(j).ljust(right_column_width) + " |" + "\n"
         
-        table_subheader_2 = "| Recording Conditions".ljust(lw-1) + "|" + "\n"
-        recording_conditions = ['Recording Duration','Spatial Frequency','Recording Intensity','Slant Angle','Wavelength of the Reconstruction Beam']
+        table_subheader_2 = "| Recording Conditions".ljust(table_width-1) + "|" + "\n"
+        recording_conditions = ['Recording Duration [s]','Spatial Frequency [lines/mm]','Recording Intensity [mW/cm2]','Slant Angle','Wavelength of the Reconstruction Beam [cm]']
         recording_values = [self.__total_time,self.__lpmm,self.__I0,self.__slant_angle,self.__lambda_probe]
         table_body_recording = ""
         for i, j in zip(recording_conditions, recording_values):
-            table_body_recording += "| " + i.ljust(80) + " | " + str(j).ljust(20) + " |" + "\n"
+            table_body_recording += "| " + i.ljust(left_column_width) + " | " + str(j).ljust(right_column_width) + " |" + "\n"
             
-        table_subheader_3 = "| Nanoparticle Properties".ljust(lw-1) + "|" + "\n"
-        nanoparticle_properties = ['Refractive Index (Nanoparticles)', 'Density (Nanoparticles)','Diffusion Coefficient (Nanoparticles)',
-                                   'Oligomer-Nanoparticle Cross-Diffusion Constant','Polymer-Nanoparticle Cross-Diffusion Constant']
-        nanoparticle_values = [self.__n_z,self.__rhoz,self.__Dz,self.__epsilon_pz,self.__epsilon_qz]
+        table_subheader_3 = "| Nanoparticle Properties".ljust(table_width-1) + "|" + "\n"
+        nanoparticle_properties = ['Refractive Index (Nanoparticles)', 'Density (Nanoparticles) [g/cm3]','Diffusion Coefficient (Nanoparticles) [cm2/s]',
+                                   'Oligomer-Nanoparticle Cross-Diffusion Constant','Polymer-Nanoparticle Cross-Diffusion Constant','Scattering']
+        nanoparticle_values = [self.__n_z,self.__rhoz,self.__Dz,self.__epsilon_pz,self.__epsilon_qz,self.__xi]
         table_body_nanoparticle = ""
         for i, j in zip(nanoparticle_properties, nanoparticle_values):
-            table_body_nanoparticle += "| " + i.ljust(80) + " | " + str(j).ljust(20) + " |" + "\n"
+            table_body_nanoparticle += "| " + i.ljust(left_column_width) + " | " + str(j).ljust(right_column_width) + " |" + "\n"
             
         return hl + table_header + hl + table_subheader_1 + hl+ table_body_photopolymer + hl +table_subheader_2 + hl +table_body_recording + hl + table_subheader_3 + hl + table_body_nanoparticle + hl
         
@@ -132,10 +134,6 @@ class HolographicGrating:
     def get_nanoparticle_properties(self):
         
         return {'n_z':self.__n_z,'rhoz':self.__rhoz,'Dz':self.__Dz,'epsilon_pz':self.__epsilon_pz,'epsilon_qz':self.__epsilon_qz}
-    
-    def get_simulation_properties(self):
-        
-        return {'Delta_t':self.__Delta_t, 'Delta_x':self.__Delta_x, 'Nx':self.__Nx}
     
     def holographic_recording(self):
         
@@ -169,16 +167,14 @@ class HolographicGrating:
         except ZeroDivisionError:
             print("Error: 0 <= wt_pc < 1")
             return None
-        self.__z0 = z0
-
+        
         # 1.3 --- Matrix initial conditions
-        u1=1
-        du_dt=0
+        u1, du_dt = 1, 0
         m1 = np.ones(Nx*Nx)# m at j=0
         p1 = np.zeros(Nx*Nx)# p at j=0
         q1 = np.zeros(Nx*Nx)# q at j=0
         z1 = np.ones(Nx*Nx)# z at j=0
-        b1 = self.__b0*np.ones(Nx*Nx)# b at j=0
+        b1 = np.ones(Nx*Nx)# b at j=0
 
         try:
             Volume0=m0/self.__rhom + self.__b0/self.__rhob + z0/self.__rhoz
@@ -193,7 +189,6 @@ class HolographicGrating:
         Lorentz_Lorenz_RHS = phi_m0*(self.__n_m*self.__n_m - 1)/(self.__n_m*self.__n_m + 2) + phi_b0*(self.__n_b*self.__n_b - 1)/(self.__n_b*self.__n_b + 2) + phi_z0*(self.__n_z*self.__n_z - 1)/(self.__n_z*self.__n_z + 2)
 
         Initial_RI = np.sqrt((2*Lorentz_Lorenz_RHS + 1)/(1 - Lorentz_Lorenz_RHS))
-
         inside_ri = Initial_RI
 
         n1=Initial_RI*np.ones(Nx*Nx)
@@ -222,8 +217,7 @@ class HolographicGrating:
         times_2 = [interior_points[i] for i in range(len(interior_points)) if interior_points[i]%2 == 0]
         Y=np.arange(0,1+self.__Delta_x, self.__Delta_x)
         time=np.arange(1,self.__total_time+self.__output_time_step, self.__output_time_step)
-        Y1=[]
-        x1=[]
+        x1, Y1 = [], []
         for i in range(Nx):
             for j in list(Y):
                 Y1.append(j)
@@ -232,7 +226,7 @@ class HolographicGrating:
         Y1=np.sort(Y1)    
         indexDF=pd.DataFrame({'x':x1, 'y':Y1})
 
-        spatial_profile_DF=pd.DataFrame({"x": x1, 'Y': Y1, "monomer": m1, "short_polymer": p1, "immobile_polymer": q1, 'nanoparticles': z1, 'binder':b1, 'refractive_index': n1, "time": np.zeros(len(n1))})
+        spatial_profile_DF=pd.DataFrame({"x": x1, 'Y': Y1, "monomer": m1, "short_polymer": p1, "immobile_polymer": q1, 'nanoparticles': z0*z1, 'binder':self.__b0*b1, 'refractive_index': n1, "time": np.zeros(len(n1))})
 
         optical_properties_DF=pd.DataFrame({'Y': Y, "time": np.zeros(len(Y)), 'N0':np.zeros(len(Y))+Initial_RI,'Delta_n':np.zeros(len(Y)),'nu':np.zeros(len(Y)),'d2':np.zeros(len(Y))})
 
@@ -432,18 +426,13 @@ class HolographicGrating:
 
             nu=pi*Delta_n*self.__T0*u1/self.__lambda_probe/np.cos(theta_B)
 
-            m1 = m2
-            p1 = p2
-            q1 = q2
-            z1 = z2
-            b1 = b2
-            n1 = n2
+            m1, p1, q1, z1, b1, n1 = m2, p2, q2, z2, b2, n2
 
             if self.__Delta_t*j in time:
 
                 spatial_profile_DF=pd.concat([spatial_profile_DF, pd.DataFrame({"x": x1,
                                                                                 'Y': Y1,"monomer": m1,"short_polymer": p1,"immobile_polymer": 
-                                                                                q1,'nanoparticles': z1,'binder':b1,'refractive_index': n1,
+                                                                                q1,'nanoparticles': z0*z1,'binder':self.__b0*b1,'refractive_index': n1,
                                                                                 "time":j*self.__Delta_t*np.ones(len(n1))})]).reset_index(drop=True)
 
                 optical_properties_DF=pd.concat([optical_properties_DF,pd.DataFrame({'time':j*self.__Delta_t,'Y':Y,'N0':N0,'Delta_n':Delta_n,
@@ -458,11 +447,9 @@ class HolographicGrating:
 
         if self.__Klein_Cook < 10:
             self.__Geometry='Planar'
-            J0=optical_properties_DF.nu/2
-            J1=J0
+            J0, J1 = optical_properties_DF.nu/2, J0
             for l in range(1,101):
-                J1 = J1 + ((-1)**l)/factorial(l)/factorial(l+1)*(J0**(2*l + 1))
-            eta=J1*J1
+                J1, eta = J1 + ((-1)**l)/factorial(l)/factorial(l+1)*(J0**(2*l + 1)), J1*J1
         else:
             self.__Geometry='Volume'
             eta=np.sin(np.sqrt(optical_properties_DF.nu*optical_properties_DF.nu))**2
@@ -471,19 +458,20 @@ class HolographicGrating:
 
         end_computation = gettime()
         self.__computation_time = end_computation-start_computation
+        self.spatial_profile_DF = spatial_profile_DF
+        self.optical_properties_DF = optical_properties_DF
+        self.shrinkage_DF = shrinkage_DF
         
-        lw=107
-        print("-"*lw)
-        print(" Numerical Simulation Complete ".center(lw, '-'))
-        print("-"*lw)
-        print("| Computation Time: {:.1f} s".format(self.__computation_time).ljust(lw-1)+'|')        
+        table_width=107
+        print("-"*table_width)
+        print(" Numerical Simulation Complete ".center(table_width, '-'))
+        print("-"*table_width)
+        print("| Computation Time: {:.1f} s".format(self.__computation_time).ljust(table_width-1)+'|')        
         print(HolographicGrating.__str__(self))
         
-        self.spatial_profile_DF = spatial_profile_DF
-
-        self.optical_properties_DF = optical_properties_DF
-
-        self.shrinkage_DF = shrinkage_DF
+    def get_simulation_properties(self):
+        
+        return {'Delta_t':self.__Delta_t, 'Delta_x':self.__Delta_x, 'Nx':self.__Nx,'computation_time':self.__computation_time}
 
 if __name__ == "__main__":
     a = HolographicGrating(total_time=0)
