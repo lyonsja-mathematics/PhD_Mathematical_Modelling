@@ -1,4 +1,4 @@
-This repository contains the final version of the programming scripts I wrote for my PhD thesis on *Mathematical Modelling of Hybrid Photonic Structures for Holographic Sensors*. My research was funded by the Irish Research Council (GOIPG/2021/214).
+This repository contains the final version of the programming scripts I wrote for my PhD thesis on *Mathematical Modelling of Hybrid Photonic Structures for Holographic Sensors*. This research was funded by the Irish Research Council (GOIPG/2021/214).
 
 ![The formation of holographic diffraction gratings in hybrid photopolymer media](https://github.com/lyonsja-mathematics/PhD_Mathematical_Modelling/blob/main/figures/holographic_photopolymerization_v3.png)
 
