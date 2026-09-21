@@ -9,6 +9,8 @@ from numerical_integration import simpsons_rule_1D, trapezoidal_rule_integration
 from jl_errors import non_negative_args
 
 class UnslantedBraggGrating:
+
+    grating_count = 0
     
     @non_negative_args
     def __init__(
@@ -73,6 +75,7 @@ class UnslantedBraggGrating:
             return None
         self.__Delta_t = Delta_t
         self.__output_time_step = output_time_step
+        UnslantedBraggGrating.grating_count += 1
         
     def __str__(self):
         
