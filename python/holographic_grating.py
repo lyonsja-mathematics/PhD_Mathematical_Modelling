@@ -11,6 +11,8 @@ from numerical_integration import simpsons_rule_1D, trapezoidal_rule_integration
 from jl_errors import non_negative_args
 
 class HolographicGrating:
+
+    grating_count = 0
     
     @non_negative_args
     def __init__(
@@ -86,6 +88,7 @@ class HolographicGrating:
         self.__Delta_Y = Delta_x
         self.__Delta_t = Delta_t
         self.__output_time_step = output_time_step
+        HolographicGrating.grating_count += 1
         
     def __str__(self):
         
